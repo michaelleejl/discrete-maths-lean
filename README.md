@@ -1,1 +1,1 @@
-# discrete-maths-exercises
+# Discrete Maths
