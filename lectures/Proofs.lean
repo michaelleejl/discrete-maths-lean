@@ -6,6 +6,7 @@ import Mathlib.Data.Real.Basic
 import Mathlib.Data.Real.Sqrt
 import Mathlib.Tactic.Ring
 
+open Nat
 ----------------------------- Lecture 01 -----------------------------
 
 -- Definition 7
@@ -274,3 +275,109 @@ lemma choose_when_0_or_p :
                           simp [h_m_eq_0]
         | inr h_m_eq_p => exists 0
                           simp [h_m_eq_p]
+
+
+-- Lemma 28
+
+theorem classical_or :
+  ∀ {a b : Prop},
+  (a ∨ b) → ¬ b → a
+    := by intro a b hab hna
+          cases hab with
+          | inl ha => exact ha
+          | inr hb => contradiction
+
+
+lemma h_choose_rw {p m : ℕ} :
+   m ≤ p → (p)! = (p.choose m) * ((m)! * (p - m)!)
+  :=  by intro hle
+         have h_dvd :
+          (m)! * (p-m)! ∣ (p)!
+          := Nat.factorial_mul_factorial_dvd_factorial hle
+         calc
+          (p)! = (p.choose m) * ((m)! * (p - m)!)
+            := by rw [Nat.choose_eq_factorial_div_factorial hle]
+                  rw [Nat.div_mul_cancel h_dvd]
+
+lemma extract_p_from_p! {p m : ℕ} :
+    Nat.Prime p →
+    (p)! = (p.choose m) * ((m)! * (p - m)!) →
+    p*(p-1)! = (p.choose m) * ((m)! * (p - m)!)
+  := by intro h_prime h_eq
+        have h_succ : ∃ k, p = k + 1
+          := by exact Nat.exists_eq_succ_of_ne_zero h_prime.ne_zero
+        obtain ⟨ k, hk ⟩ := h_succ
+        have h_pred : k = p - 1
+          := by simp [hk]
+        rw [hk, Nat.factorial_succ, ← hk, h_pred] at h_eq
+        exact h_eq
+
+lemma num_does_not_divide_smaller {a b : ℕ} :
+    0 < a → a < b → ¬ (b ∣ a)
+  := by intros h_pos h_lt
+        intro h_div
+        obtain ⟨k, hk⟩ := h_div
+        have h_k_pos : 0 < k
+          := Nat.pos_of_ne_zero (by intro hk0
+                                    rw [hk0, mul_zero] at hk
+                                    exact h_pos.ne (symm hk))
+        have h_ge : a ≥ b
+          := by rw [hk]
+                exact Nat.le_mul_of_pos_right b h_k_pos
+        have contra : ¬ (a < b)
+          := Nat.not_lt_of_ge h_ge
+        contradiction
+
+lemma euclid_contrapositive {p a b : ℕ} :
+    Nat.Prime p → ¬ (p ∣ a) ∧ ¬ (p ∣ b) → ¬ (p ∣ a * b)
+  := by intro h_prime ⟨ h_na, h_nb ⟩
+        by_contra h_div
+        have h_p : p ∣ a ∨ p ∣ b
+          := by rw [← h_prime.dvd_mul]
+                exact h_div
+        cases h_p with
+          | inl h_a => contradiction
+          | inr h_b => contradiction
+
+lemma p_does_not_divide_fact {p m : ℕ} :
+    Nat.Prime p → m < p → ¬ (p ∣ (m)!)
+  := by intro h_prime h_lt
+        induction m with
+        | zero      => simp [h_prime.ne_one]
+        | succ n ih => rw [Nat.factorial_succ]
+                       apply euclid_contrapositive h_prime
+                       constructor
+                       · have h_s_pos : 0 < n+1
+                            := Nat.succ_pos n
+                         exact num_does_not_divide_smaller h_s_pos h_lt
+                       · have h_small : n < p
+                            := Nat.lt_of_succ_lt h_lt
+                         exact ih h_small
+
+lemma choose_when_prime :
+  ∀ p m : ℕ,
+  Nat.Prime p → 0 < m ∧ m < p → (p.choose m) ≡ 0 [MOD p]
+  := by intro p m h_prime ⟨hml, hmu⟩
+        have hle : m ≤ p
+          := Nat.le_of_lt hmu
+        have h_eq : (p)! = (p.choose m) * ((m)! * (p - m)!)
+          := h_choose_rw hle
+        have h_extracted : p*(p-1)! = (p.choose m) * ((m)! * (p - m)!)
+          := extract_p_from_p! h_prime h_eq
+        have h_p_div : p ∣ (p.choose m) * ((m)! * (p - m)!)
+          := by use Nat.factorial (p-1)
+                simp [h_extracted]
+        have h_p_div_or : (p ∣ (p.choose m)) ∨ (p ∣ ((m)! * (p - m)!))
+          := by rw [h_prime.dvd_mul] at h_p_div
+                exact h_p_div
+        have h_p_ndiv_1 : ¬ (p ∣ (m)!)
+          := p_does_not_divide_fact h_prime hmu
+        have h_p_ndiv_2 : ¬ (p ∣ (p - m)!)
+          := have h_small : p - m < p := Nat.sub_lt (h_prime.pos) (hml)
+             p_does_not_divide_fact h_prime h_small
+        have h_p_ndiv : ¬ (p ∣ (m)! * (p - m)!)
+          := euclid_contrapositive h_prime ⟨ h_p_ndiv_1, h_p_ndiv_2 ⟩
+        have h_divides : p ∣ (p.choose m)
+          := classical_or h_p_div_or h_p_ndiv
+        rw [Nat.dvd_iff_mod_eq_zero] at h_divides
+        exact h_divides
