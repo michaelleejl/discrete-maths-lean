@@ -1,10 +1,12 @@
 import Proofs.Basic
 import Mathlib.Data.Nat.Prime.Basic
+import Mathlib.Data.Nat.Choose.Sum
 import Mathlib.Data.Nat.Factorial.Basic
 import Mathlib.Data.Int.Basic
 import Mathlib.Data.Real.Basic
 import Mathlib.Data.Real.Sqrt
 import Mathlib.Tactic.Ring
+
 
 open Nat
 ----------------------------- Lecture 01 -----------------------------
@@ -265,11 +267,11 @@ theorem squares_mod_4 :
                       linarith
 
 -- Lemma 27
-lemma choose_when_0_or_p :
-  ∀ p m : ℕ, p > 0 →
-  m = 0 ∨ m = p → congruent_modulo (Nat.choose p m) 1 p
-  := by intro p m h_p_pos h_m_0_or_p
-        dsimp [congruent_modulo, divides]
+lemma choose_when_0_or_p {p m : ℕ} :
+  p > 0 →
+  m = 0 ∨ m = p → (p.choose m) ≡ 1 [MOD p]
+  := by intro h_p_pos h_m_0_or_p
+        rw [Nat.modEq_iff_dvd]
         cases h_m_0_or_p with
         | inl h_m_eq_0 => exists 0
                           simp [h_m_eq_0]
@@ -278,7 +280,6 @@ lemma choose_when_0_or_p :
 
 
 -- Lemma 28
-
 theorem classical_or :
   ∀ {a b : Prop},
   (a ∨ b) → ¬ b → a
@@ -354,10 +355,9 @@ lemma p_does_not_divide_fact {p m : ℕ} :
                             := Nat.lt_of_succ_lt h_lt
                          exact ih h_small
 
-lemma choose_when_prime :
-  ∀ p m : ℕ,
+lemma choose_when_prime_exclusive {p m : ℕ} :
   Nat.Prime p → 0 < m ∧ m < p → (p.choose m) ≡ 0 [MOD p]
-  := by intro p m h_prime ⟨hml, hmu⟩
+  := by intro h_prime ⟨hml, hmu⟩
         have hle : m ≤ p
           := Nat.le_of_lt hmu
         have h_eq : (p)! = (p.choose m) * ((m)! * (p - m)!)
@@ -381,3 +381,84 @@ lemma choose_when_prime :
           := classical_or h_p_div_or h_p_ndiv
         rw [Nat.dvd_iff_mod_eq_zero] at h_divides
         exact h_divides
+
+-- Proposition 29
+theorem choose_when_prime_inclusive {p m : ℕ} :
+    Nat.Prime p → 0 ≤ m ∧ m ≤ p →
+    (p.choose m) ≡ 0 [MOD p] ∨ (p.choose m) ≡ 1 [MOD p]
+  := by intro h_prime ⟨ hlb, hub ⟩
+        have h_p_pos := h_prime.pos
+        rw [Nat.le_iff_lt_or_eq] at hlb
+        rw [Nat.le_iff_lt_or_eq] at hub
+        cases hlb with
+        | inl h_m_gt_0 =>
+          cases hub with
+          | inl h_p_gt_m
+            => left
+               exact choose_when_prime_exclusive h_prime ⟨ h_m_gt_0, h_p_gt_m ⟩
+          | inr h_p_eq_m
+            => right
+               exact choose_when_0_or_p h_p_pos (Or.inr (h_p_eq_m))
+        | inr h_m_eq_0
+            => right
+               exact choose_when_0_or_p h_p_pos (Or.inl (symm h_m_eq_0))
+
+-- Corollary 33
+theorem the_freshmans_dream {m n p : ℕ} :
+  Nat.Prime p → (m + n)^p ≡ m^p + n^p [MOD p]
+  := by intro h_prime
+        simp only [add_pow, Finset.sum_range_succ']
+        have h_succ : ∃ k, p = k + 1
+          := Nat.exists_eq_succ_of_ne_zero h_prime.ne_zero
+        have h_p_ge_1 : p ≥ 1
+          := h_prime.pos
+        obtain ⟨ i , hi ⟩ := h_succ
+        rw [hi]
+        have h_pred : i = p - 1
+          := by simp [hi]
+        rw [Finset.sum_range_succ, h_pred, Nat.sub_add_cancel h_prime.pos]
+        conv =>
+          lhs
+          simp
+        have h_each : ∀ k ∈ Finset.range (p - 1),
+                      p ∣ m^(k+1) * n^(p-(k+1)) * p.choose (k+1)
+            := by intro k hk
+                  suffices h_div : p ∣ p.choose (k+1)
+                    by rw [mul_comm]
+                       apply Nat.dvd_mul_right_of_dvd
+                       exact h_div
+                  rw [Nat.dvd_iff_mod_eq_zero]
+                  rw [Finset.mem_range] at hk
+                  have hkl : 0 < k+1 := by linarith
+                  have hku : k + 1 < p := by linarith
+                  exact choose_when_prime_exclusive h_prime ⟨ hkl, hku ⟩
+        have h_zero : p ∣ ∑ k ∈ Finset.range (p - 1),
+                      m^(k+1) * n^(p-(k+1)) * p.choose (k+1)
+          := Finset.dvd_sum h_each
+        rw [← zero_add (m^p + n^p), add_assoc]
+        rw [Nat.dvd_iff_mod_eq_zero] at h_zero
+        exact ModEq.add h_zero (ModEq.refl (m^p + n^p))
+
+-- Corollary 34
+theorem the_dropout_lemma {m p : ℕ} :
+    Nat.Prime p → (m + 1)^p ≡ m^p + 1 [MOD p]
+  := by intro h
+        have h_fr : (m + 1)^p ≡ m^p + 1^p [MOD p]
+          := the_freshmans_dream h
+        rw [Nat.one_pow] at h_fr
+        exact h_fr
+
+-- Corollary 35
+theorem the_many_dropout_lemma {m p : ℕ} :
+    Nat.Prime p → (m + i)^p ≡ m^p + i [MOD p]
+  := by intro h
+        induction i with
+        | zero      => rw [Nat.add_zero]
+                       exact ModEq.refl (m^p)
+        | succ n ih => rw [← Nat.add_assoc]
+                       have h_d : (m + n + 1) ^ p ≡ (m+n)^p + 1 [MOD p]
+                         := the_dropout_lemma h
+                       have h_i : (m+n)^p + 1 ≡ m^p + n + 1 [MOD p]
+                         := ModEq.add_right 1 ih
+                       exact ModEq.trans h_d h_i
+
