@@ -15,7 +15,6 @@ structure QuoRem (m n : ℕ) where
   eq : m = q * n + r
   lt : r < n
 
-
 def division_algorithm : (m : ℕ) → (n: ℕ) → (n > 0) → QuoRem m n :=
   fun m => fun n => fun p =>
     if hle : m ≤ n then
