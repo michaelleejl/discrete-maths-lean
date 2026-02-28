@@ -1,10 +1,11 @@
 import Mathlib.Data.Nat.Prime.Basic
-import Mathlib.Data.Int.NatPrime
 import Mathlib.Data.Nat.Choose.Sum
 import Mathlib.Data.Nat.Factorial.Basic
 import Mathlib.Data.Int.Basic
+import Mathlib.Data.Int.NatPrime
 import Mathlib.Data.Real.Basic
 import Mathlib.Data.Real.Sqrt
+
 import Mathlib.Tactic.Ring
 
 
@@ -449,7 +450,7 @@ theorem the_many_dropout_lemma {m p : ℕ} :
                          := the_dropout_lemma h
                        have h_i : (m+n)^p + 1 ≡ m^p + n + 1 [MOD p]
                          := ModEq.add_right 1 ih
-                       exact ModEq.trans h_d h_i
+                       exact h_d.trans h_i
 
 ----------------------------- Lecture 05 -----------------------------
 

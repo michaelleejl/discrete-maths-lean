@@ -115,12 +115,13 @@ theorem uniqueness_of_monoid_inverse {X : Type} :
         dsimp [monoid_left_inverse, monoid_right_inverse]
         intros h
         match h with
-          | ⟨ hl, hr ⟩ => calc
-                          l = M.op l M.e        := Eq.symm (M.r_neu l)
-                          _ = M.op l (M.op x r) := by rw [hr]
-                          _ = M.op (M.op l x) r := Eq.symm (M.assoc l x r)
-                          _ = M.op M.e r        := by rw [hl]
-                          _ = r                 := M.l_neu r
+          | ⟨ hl, hr ⟩ =>
+              calc
+              l = M.op l M.e        := (M.r_neu l).symm
+              _ = M.op l (M.op x r) := by rw [hr]
+              _ = M.op (M.op l x) r := (M.assoc l x r).symm
+              _ = M.op M.e r        := by rw [hl]
+              _ = r                 := M.l_neu r
 
 
 structure Group (X : Type) extends Monoid X where
