@@ -1,8 +1,11 @@
 import Mathlib.Data.Nat.Basic
-import Mathlib.Logic.ExistsUnique
 import Mathlib.Data.Nat.ModEq
+import Mathlib.Data.Int.Basic
+
+import Mathlib.Logic.ExistsUnique
 
 import Mathlib.Tactic
+
 
 open Nat
 
@@ -85,3 +88,48 @@ theorem division_theorem {m n : ℕ} :
                 apply Prod.ext
                 · exact h7
                 · exact h6
+
+-- Proposition 57
+theorem cong_mod_iff_rem_eq {k l m : ℕ} (h_pos : m > 0) :
+    k ≡ l [MOD m] ↔ rem k m h_pos = rem l m h_pos
+  := by constructor
+
+        · intro hcong
+          dsimp [rem]
+          let ⟨q, r, eq, lt⟩ := division_algorithm k m h_pos
+          let ⟨q', r', eq', lt'⟩ := division_algorithm l m h_pos
+          have h1 : k - r  = m * q
+                  := by rw [eq, Nat.add_sub_cancel, Nat.mul_comm]
+          have h2 : l - r' = m * q'
+            := by rw [eq', Nat.add_sub_cancel, Nat.mul_comm]
+          have h3: r ≡ k [MOD m]
+            := by rw [Nat.modEq_iff_dvd]
+                  exists q
+                  linarith [h1]
+          have h4: r' ≡ l [MOD m]
+            := by rw [Nat.modEq_iff_dvd]
+                  exists q'
+                  linarith [h2]
+          have h5: r ≡ l [MOD m]
+            := Nat.ModEq.trans h3 hcong
+          have h6: r ≡ r' [MOD m]
+            := Nat.ModEq.trans h5 (Nat.ModEq.symm h4)
+          have h7: r = r' := Nat.ModEq.eq_of_lt_of_lt h6 lt lt'
+          exact h7
+        · intro heq
+          dsimp [rem] at heq
+          let divk := division_algorithm k m h_pos
+          let divl := division_algorithm l m h_pos
+          have h_rw : (l: ℤ) - (k: ℤ) = ((divl.q - divk.q) : ℤ) * m
+            := calc
+                (l : ℤ) - (k : ℤ) = divl.q * m + divl.r - divk.r - divk.q * m
+                  := by simp [divk.eq, divl.eq]
+                        linarith
+                _ = (divl.q - divk.q) * m
+                  := by rw [heq]
+                        linarith
+          have h_div : (m : ℤ) ∣ (l: ℤ) - (k: ℤ)
+            := by exists (divl.q - divk.q)
+                  rw [h_rw]
+                  linarith
+          exact Nat.modEq_of_dvd h_div
