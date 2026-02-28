@@ -1,6 +1,7 @@
 import Mathlib.Data.Nat.Basic
 import Mathlib.Data.Nat.ModEq
 import Mathlib.Data.Int.Basic
+import Mathlib.Data.Int.ModEq
 
 import Mathlib.Logic.ExistsUnique
 
@@ -132,3 +133,105 @@ theorem cong_mod_iff_rem_eq {k l m : ℕ} (h_pos : m > 0) :
                   rw [h_rw]
                   linarith
           exact Nat.modEq_of_dvd h_div
+
+-- Corollary 58
+lemma rem_is_identity_when_mltn {m n : ℕ} (h_pos : n > 0) :
+    (m < n) → rem m n h_pos = m
+  := by intro hnsmall
+        dsimp [rem]
+        let w := (0, m)
+        have p : w.2 < n ∧ m = w.1 * n + w.2
+          := by dsimp [w]
+                constructor
+                · exact hnsmall
+                · simp
+        let ⟨ q, r, eq, lt ⟩ := division_algorithm m n h_pos
+        let w' := (q, r)
+        have p' : w'.2 < n ∧ m = w'.1 * n + w'.2
+          := by dsimp [w']
+                constructor
+                · exact lt
+                · exact eq
+        have heu : ∃!qr : ℕ × ℕ, qr.2 < n ∧ m = qr.1 * n + qr.2
+          := division_theorem h_pos
+        have heq : (0, m) = (q, r)
+         := heu.unique p p'
+        exact (Prod.mk.inj heq).2.symm
+
+theorem modulo_arithmetic_nat {m n : ℕ} (h_pos : n > 0) :
+    m ≡ rem m n h_pos [MOD n]
+  := by dsimp [rem]
+        rw [cong_mod_iff_rem_eq h_pos]
+        let d := division_algorithm m n h_pos
+        rw [rem_is_identity_when_mltn h_pos d.lt]
+        dsimp [rem]
+
+theorem modulo_arithmetic_int {n k : ℤ} (h_pos : n > 0) :
+    ∃! knorm, k ≡ knorm [ZMOD n] ∧ 0 ≤ knorm ∧ knorm < n
+  := suffices
+      h_k_nonneg : ∀ j, j ≥ 0 →
+        ∃! jnorm, j ≡ jnorm [ZMOD n] ∧ 0 ≤ jnorm ∧ jnorm < n
+      by by_cases h: k ≥ 0
+         · specialize h_k_nonneg k
+           exact h_k_nonneg h
+         · have hmod : k ≡ k - n * k [ZMOD n]
+              := by rw [Int.modEq_sub_modulus_mul_iff]
+           have hminusn : (1 - n) ≤ 0
+              := by linarith [h_pos]
+           have hminusk : k ≤ 0
+              := by linarith [h]
+           have hnonneg : k - n * k ≥ 0
+              := calc
+                 k - n * k = k - k * n   := by rw [Int.mul_comm]
+                         _ = k*1 - k*n   := by rw [Int.mul_one]
+                         _ = k * (1 - n) := by rw [← Int.mul_sub]
+                         _ ≥ 0
+                          := Int.mul_nonneg_of_nonpos_of_nonpos hminusk hminusn
+           specialize h_k_nonneg (k - n * k)
+           have hknorm := h_k_nonneg hnonneg
+           rcases hknorm with ⟨knorm, ⟨hknormmod, hknombounds⟩, huniq⟩
+           exists knorm
+           dsimp
+           constructor
+           · constructor
+             · exact hmod.trans hknormmod
+             · exact hknombounds
+           · intro y ⟨hymod, hybounds⟩
+             have hyeq : k - n * k ≡ y [ZMOD n]
+                := hmod.symm.trans hymod
+             exact huniq y ⟨hyeq, hybounds⟩
+      by intro j hj
+         let jn := j.toNat
+         let h_jn : jn = j := Int.toNat_of_nonneg hj
+         let nn := n.toNat
+         have h_nn : nn = n := Int.toNat_of_nonneg (Int.le_of_lt h_pos)
+         have h_nn_pos : nn > 0 := by rw [← h_nn] at h_pos
+                                      linarith
+         let d := division_algorithm jn nn h_nn_pos
+         have h_eq : jn ≡ d.r [MOD nn]
+           := modulo_arithmetic_nat h_nn_pos
+         exists rem jn nn h_nn_pos
+         dsimp
+         constructor
+         · constructor
+           · rw [← h_jn, ← h_nn]
+             exact Int.natCast_modEq_iff.mpr h_eq
+           · constructor
+             · linarith [d.r.zero_le]
+             · dsimp [rem]
+               linarith [d.lt]
+         · intro y ⟨hymod, hyzero, hylt⟩
+           let yn := y.toNat
+           let h_yn : yn = y := Int.toNat_of_nonneg hyzero
+           rw [← h_yn]
+           have hynlt : yn < nn
+            := Int.ofNat_lt.mp (by rw [← h_yn, ← h_nn] at hylt; exact hylt)
+           rw [Nat.cast_inj]
+           have h_y_eq : rem yn nn h_nn_pos = yn
+            := rem_is_identity_when_mltn h_nn_pos hynlt
+           rw [← h_y_eq]
+           rw [← cong_mod_iff_rem_eq h_nn_pos]
+           have h_cong : yn ≡ jn [MOD nn]
+            := by rw [← h_jn, ← h_yn, ← h_nn] at hymod
+                  exact (Int.natCast_modEq_iff.mp hymod).symm
+           exact h_cong
