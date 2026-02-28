@@ -225,12 +225,12 @@ theorem modulo_arithmetic_int {n k : ℤ} (h_pos : n > 0) :
            let h_yn : yn = y := Int.toNat_of_nonneg hyzero
            rw [← h_yn]
            have hynlt : yn < nn
-            := Int.ofNat_lt.mp (by rw [← h_yn, ← h_nn] at hylt; exact hylt)
+            := Int.ofNat_lt.mp (by rw [← h_yn, ← h_nn] at hylt
+                                   exact hylt)
            rw [Nat.cast_inj]
            have h_y_eq : rem yn nn h_nn_pos = yn
             := rem_is_identity_when_mltn h_nn_pos hynlt
-           rw [← h_y_eq]
-           rw [← cong_mod_iff_rem_eq h_nn_pos]
+           rw [← h_y_eq, ← cong_mod_iff_rem_eq h_nn_pos]
            have h_cong : yn ≡ jn [MOD nn]
             := by rw [← h_jn, ← h_yn, ← h_nn] at hymod
                   exact (Int.natCast_modEq_iff.mp hymod).symm
