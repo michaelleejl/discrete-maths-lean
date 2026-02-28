@@ -505,25 +505,18 @@ noncomputable def a_seq
     | 0 =>  have h_eq : 1 * a₀ = a₀ := by simp
             have h_gt : 1 ≥ 2^0 := by rfl
             ⟨1, a₀, b₀, hpos_a₀, hpos_b₀, hfrac₀, h_eq, h_gt⟩
-    | n+1 => let s := a_seq a₀ b₀ hpos_a₀ hpos_b₀ hfrac₀ h_c n;
-             let ps := s.ps
-             let an := s.a
-             let bn := s.b
-             let hpos_an := s.hpos_a
-             let hpos_bn := s.hpos_b
-             let hfracn := s.hfrac
-             let heqn := s.heq
-             let hgen := s.hge
+    | n+1 => let ⟨ ps, an, bn, hpos_an, hpos_bn, hfracn, heqn, hgen ⟩
+                := a_seq a₀ b₀ hpos_a₀ hpos_b₀ hfrac₀ h_c n;
              let p := Classical.choose (h_c an bn hpos_an hpos_bn hfracn)
              let ⟨p_prime, ⟨p_div_a, p_div_b⟩⟩
               := Classical.choose_spec (h_c an bn hpos_an hpos_bn hfracn)
              let a_new : ℕ := an / p
              let b_new : ℕ := bn / p
              have hpos_an : (0 < a_new)
-              := Nat.div_pos (Nat.le_of_dvd s.hpos_a p_div_a) (Nat.Prime.pos p_prime)
+              := Nat.div_pos (Nat.le_of_dvd hpos_an p_div_a) (Nat.Prime.pos p_prime)
              have hpos_bn : (0 < b_new)
-              := Nat.div_pos (Nat.le_of_dvd s.hpos_b p_div_b) (Nat.Prime.pos p_prime)
-             have hk : p * a_new = s.a
+              := Nat.div_pos (Nat.le_of_dvd hpos_bn p_div_b) (Nat.Prime.pos p_prime)
+             have hk : p * a_new = an
               := Nat.mul_div_cancel' p_div_a
              have hl : p * b_new = bn
               := Nat.mul_div_cancel' p_div_b
@@ -531,7 +524,7 @@ noncomputable def a_seq
               := Nat.one_le_of_lt (Nat.pos_of_ne_zero p_prime.ne_zero)
              have hfrac_new : x = a_new / ((b_new) : ℝ)
               := calc
-                  x = an / bn := s.hfrac
+                  x = an / bn := hfracn
                   _ = ((p * a_new) : ℕ) / ((p * b_new) : ℕ)
                     := by rw [hl, hk]
                   _ = ((p * a_new)) / ((p * b_new))
