@@ -516,17 +516,14 @@ noncomputable def a_seq
               := Nat.div_pos (Nat.le_of_dvd hpos_an p_div_a) (Nat.Prime.pos p_prime)
              have hpos_bn : (0 < b_new)
               := Nat.div_pos (Nat.le_of_dvd hpos_bn p_div_b) (Nat.Prime.pos p_prime)
-             have hk : p * a_new = an
-              := Nat.mul_div_cancel' p_div_a
-             have hl : p * b_new = bn
-              := Nat.mul_div_cancel' p_div_b
              have hp : 1 <= p
               := Nat.one_le_of_lt (Nat.pos_of_ne_zero p_prime.ne_zero)
              have hfrac_new : x = a_new / ((b_new) : ℝ)
               := calc
                   x = an / bn := hfracn
                   _ = ((p * a_new) : ℕ) / ((p * b_new) : ℕ)
-                    := by rw [hl, hk]
+                    := by rw [Nat.mul_div_cancel' p_div_b,
+                              Nat.mul_div_cancel' p_div_a]
                   _ = ((p * a_new)) / ((p * b_new))
                     := by simp
                   _ = (a_new) / (b_new)
