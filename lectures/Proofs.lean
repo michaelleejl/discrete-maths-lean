@@ -1,4 +1,3 @@
-import Proofs.Basic
 import Mathlib.Data.Nat.Prime.Basic
 import Mathlib.Data.Int.NatPrime
 import Mathlib.Data.Nat.Choose.Sum
