@@ -42,6 +42,14 @@ def division_algorithm : (m : ℕ) → (n: ℕ) → (n > 0) → QuoRem m n :=
             _ = (q + 1) * n + r := by rw [← Nat.succ_mul]
       ⟨q + 1, r, eq, hlt⟩
 
+def quo : (m : ℕ) → (n : ℕ) → (n > 0) → ℕ :=
+  fun m => fun n => fun p =>
+    (division_algorithm m n p).q
+
+def rem : (m : ℕ) → (n : ℕ) → (n > 0) → ℕ :=
+  fun m => fun n => fun p =>
+    (division_algorithm m n p).r
+
 theorem division_theorem {m n : ℕ} :
     n > 0 → ∃!qr : ℕ × ℕ, qr.2 < n ∧ m = qr.1 * n + qr.2
   := by intro hpos
