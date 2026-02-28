@@ -52,11 +52,11 @@ theorem division_theorem {m n : ℕ} :
           dsimp
           intro h
           match h with
-          | ⟨ hr, hm ⟩ =>
+          | ⟨ lt', eq' ⟩ =>
                 have h1 : m - r  = n * q
                   := by rw [eq, Nat.add_sub_cancel, Nat.mul_comm]
                 have h2 : m - r' = n * q'
-                  := by rw [hm, Nat.add_sub_cancel, Nat.mul_comm]
+                  := by rw [eq', Nat.add_sub_cancel, Nat.mul_comm]
                 have h3 : r ≡ m [MOD n]
                   := by rw [Nat.modEq_iff_dvd]
                         exists q
@@ -68,10 +68,10 @@ theorem division_theorem {m n : ℕ} :
                 have h5 : r' ≡ r [MOD n]
                   := Nat.ModEq.trans h4 (Nat.ModEq.symm h3)
                 have h6 : r' = r
-                  := Nat.ModEq.eq_of_lt_of_lt h5 hr lt
+                  := Nat.ModEq.eq_of_lt_of_lt h5 lt' lt
                 have h7 : q' = q
-                  := by rw [h6] at hm
-                        rw [hm] at eq
+                  := by rw [h6] at eq'
+                        rw [eq'] at eq
                         rw [Nat.add_left_inj] at eq
                         rw [Nat.mul_left_inj (Nat.ne_of_gt hpos)] at eq
                         exact eq
