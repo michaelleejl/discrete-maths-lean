@@ -93,7 +93,6 @@ theorem division_theorem {m n : ℕ} :
 theorem cong_mod_iff_rem_eq {k l m : ℕ} (h_pos : m > 0) :
     k ≡ l [MOD m] ↔ rem k m h_pos = rem l m h_pos
   := by constructor
-
         · intro hcong
           dsimp [rem]
           let ⟨q, r, eq, lt⟩ := division_algorithm k m h_pos
