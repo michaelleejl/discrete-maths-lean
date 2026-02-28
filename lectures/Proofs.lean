@@ -184,7 +184,7 @@ theorem transitivity_of_division {l m n : ℤ} :
 -- Proposition 24
 def P (m n z : ℤ) : Prop := 0 ≤ z ∧ z < m ∧ congruent_modulo z n m
 
-lemma transitivity_of_cong {a b c n : ℤ}:
+lemma transitivity_of_cong {a b c n : ℤ} :
     congruent_modulo a b n ∧ congruent_modulo b c n →
     congruent_modulo a c n
   := by dsimp [congruent_modulo, divides]
