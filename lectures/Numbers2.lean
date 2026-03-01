@@ -444,4 +444,4 @@ def gcd : (m n : ℤ) → (hm : m ≥ 0) → (hn : n > 0) → GCDState m n
       exact ⟨hlt, hn⟩
 
 -- Example 74
-#eval gcd 34 13 (by norm_num) (by norm_num)
+#eval (gcd 34 13 (by norm_num) (by norm_num)).d
