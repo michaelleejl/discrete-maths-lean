@@ -425,19 +425,19 @@ def gcd : (m n : ℤ) → (hm : m ≥ 0) → (hn : n > 0) → GCDState m n
                 exact hdivn
         ⟨n, hm, hn, hg⟩
       else
-      have hr : r > 0 := lt_of_le_of_ne hrnat h
-      let ⟨d, hdn, hdr, hg⟩ := gcd n r (Int.le_of_lt hn) hr;
-      have hdm : d ∣ m := by rw [heq, ← one_mul r]
-                             apply dvd_linear_comb hdn hdr
-      have hg : ∀ d', d' ∣ m ∧ d' ∣ n → d' ∣ d
-        := by intro d' ⟨ hdivm, hdivn ⟩
-              have hdivr : d' ∣ r
-                := by have heq': 1 * m + (-q) * n = r := by linarith
-                      rw [← heq']
-                      apply dvd_linear_comb hdivm hdivn
-              specialize hg d'
-              apply hg ⟨hdivn, hdivr⟩
-      ⟨d, hdm, hdn, hg⟩
+        have hr : r > 0 := lt_of_le_of_ne hrnat h
+        let ⟨d, hdn, hdr, hg⟩ := gcd n r (Int.le_of_lt hn) hr;
+        have hdm : d ∣ m := by rw [heq, ← one_mul r]
+                               apply dvd_linear_comb hdn hdr
+        have hg : ∀ d', d' ∣ m ∧ d' ∣ n → d' ∣ d
+          := by intro d' ⟨ hdivm, hdivn ⟩
+                have hdivr : d' ∣ r
+                  := by have heq': 1 * m + (-q) * n = r := by linarith
+                        rw [← heq']
+                        apply dvd_linear_comb hdivm hdivn
+                specialize hg d'
+                apply hg ⟨hdivn, hdivr⟩
+        ⟨d, hdm, hdn, hg⟩
     termination_by m n _ _ => n.toNat
     decreasing_by
       simp_wf
