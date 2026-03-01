@@ -396,3 +396,17 @@ theorem common_divisor_rem_2 {m n : ℤ}
              = (CD n r (Int.le_of_lt hn) hr)
           := heq1.trans heq2
         exact heq3
+
+-- Euclid's Algorithm
+def gcd : (m n : ℤ) → (hm : m ≥ 0) → (hn : n > 0) → ℤ
+  := fun m => fun n => fun hm => fun hn =>
+      let ⟨ _, r, _, hlt, _, hrnat ⟩
+        := division_algorithm m n hm hn;
+      if h : 0 = r then n
+      else
+      have hr : r > 0 := lt_of_le_of_ne hrnat h
+      gcd n r (Int.le_of_lt hn) hr
+    termination_by m n _ _ => n.toNat
+    decreasing_by
+      simp_wf
+      exact ⟨hlt, hn⟩
