@@ -295,6 +295,13 @@ theorem modulo_reciprocal {m k : ℤ}
 def linear_combination (r m n : ℤ) : Prop
    := ∃ s t : ℤ, s * m + t * n = r
 
+lemma dvd_linear_comb {a b d x y : ℤ}
+    (ha : d ∣ a) (hb : d ∣ b) :
+    d ∣ x * a + y * b := by
+  have h1 : d ∣ x * a := dvd_mul_of_dvd_right ha x
+  have h2 : d ∣ y * b := dvd_mul_of_dvd_right hb y
+  exact dvd_add h1 h2
+
 -- Proposition 65
 theorem modulo_reciprocal' {m k : ℤ}
    (h_pos : m > 0) :
@@ -398,15 +405,43 @@ theorem common_divisor_rem_2 {m n : ℤ}
         exact heq3
 
 -- Euclid's Algorithm
-def gcd : (m n : ℤ) → (hm : m ≥ 0) → (hn : n > 0) → ℤ
+structure GCDState (m n : ℤ) where
+  d : ℤ
+  hm : d ∣ m
+  hn : d ∣ n
+  greatest : ∀ d', d' ∣ m ∧ d' ∣ n → d' ∣ d
+
+def gcd : (m n : ℤ) → (hm : m ≥ 0) → (hn : n > 0) → GCDState m n
   := fun m => fun n => fun hm => fun hn =>
-      let ⟨ _, r, _, hlt, _, hrnat ⟩
+      let ⟨ q, r, heq, hlt, hqnat, hrnat ⟩
         := division_algorithm m n hm hn;
-      if h : 0 = r then n
+      if h : 0 = r then
+        have hn : n ∣ n := by trivial
+        have hm : n ∣ m := by rw [← h] at heq
+                              exists q
+                              linarith
+        have hg : ∀ d', d' ∣ m ∧ d' ∣ n → d' ∣ n
+          := by intro d' ⟨ hdivm, hdivn ⟩
+                exact hdivn
+        ⟨n, hm, hn, hg⟩
       else
       have hr : r > 0 := lt_of_le_of_ne hrnat h
-      gcd n r (Int.le_of_lt hn) hr
+      let ⟨d, hdn, hdr, hg⟩ := gcd n r (Int.le_of_lt hn) hr;
+      have hdm : d ∣ m := by rw [heq, ← one_mul r]
+                             apply dvd_linear_comb hdn hdr
+      have hg : ∀ d', d' ∣ m ∧ d' ∣ n → d' ∣ d
+        := by intro d' ⟨ hdivm, hdivn ⟩
+              have hdivr : d' ∣ r
+                := by have heq': 1 * m + (-q) * n = r := by linarith
+                      rw [← heq']
+                      apply dvd_linear_comb hdivm hdivn
+              specialize hg d'
+              apply hg ⟨hdivn, hdivr⟩
+      ⟨d, hdm, hdn, hg⟩
     termination_by m n _ _ => n.toNat
     decreasing_by
       simp_wf
       exact ⟨hlt, hn⟩
+
+-- Example 74
+#eval gcd 34 13 (by norm_num) (by norm_num)
