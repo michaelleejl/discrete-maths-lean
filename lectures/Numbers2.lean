@@ -56,6 +56,11 @@ def rem : (m : ℤ) → (n : ℤ) → (m ≥ 0) → (n > 0) → ℤ :=
   fun m => fun n => fun pm => fun pn =>
     (division_algorithm m n pm pn).r
 
+def rem_nonneg : (m : ℤ) → (n : ℤ) → (hm : m ≥ 0) → (hn : n > 0) →
+                  0 ≤ (rem m n hm hn) :=
+  fun m => fun n => fun pm => fun pn =>
+    (division_algorithm m n pm pn).rnat
+
 theorem division_theorem {m n : ℤ} (hmnonneg : m ≥ 0) (hnpos : n > 0) :
     ∃!qr : ℤ × ℤ, qr.1 ≥ 0 ∧ qr.2 ≥ 0 ∧ qr.2 < n ∧ m = qr.1 * n + qr.2
   := by
@@ -252,7 +257,7 @@ theorem modulo_arithmetic_int {n k : ℤ} (h_pos : n > 0) :
 theorem modulo_reciprocal {m k : ℤ}
    (h_pos : m > 0) :
    (∃ l, 0 ≤ l ∧ l < m ∧ k * l ≡ 1 [ZMOD m])
-   ↔ (∃ i j : ℤ, k * i + m  * j = 1)
+   ↔ (∃ i j : ℤ, i * k + j * m = 1)
 := by constructor
       · intro he
         obtain ⟨ l, ⟨ _, _ , hl ⟩ ⟩ := he
@@ -285,3 +290,109 @@ theorem modulo_reciprocal {m k : ℤ}
         · constructor
           · exact inormub
           · exact hmod''
+
+-- Definition 64
+def linear_combination (r m n : ℤ) : Prop
+   := ∃ s t : ℤ, s * m + t * n = r
+
+-- Proposition 65
+theorem modulo_reciprocal' {m k : ℤ}
+   (h_pos : m > 0) :
+   (∃ l, 0 ≤ l ∧ l < m ∧ k * l ≡ 1 [ZMOD m])
+   ↔ linear_combination 1 k m
+:= by dsimp [linear_combination]
+      exact modulo_reciprocal h_pos
+
+def D (m : ℤ) (_hm : 0 ≤ m) : Set ℤ
+  := { d : ℤ | 0 ≤ d ∧  d ∣ m }
+
+def CD (m : ℤ) (n : ℤ) (_hm : 0 ≤ m) (_hn : 0 ≤ n) : Set ℤ
+  := { d : ℤ | 0 ≤ d ∧ d ∣ m ∧ d ∣ n }
+
+-- Lemma 71
+lemma common_divisor_mod {m m' n : ℤ}
+    (hm : 0 ≤ m) (hm' : 0 ≤ m') (hn : 0 ≤ n) :
+    m ≡ m' [ZMOD n] → CD m n hm hn = CD m' n hm' hn
+  := by intro hmod_cong
+        dsimp [CD]
+        ext d
+        constructor
+        · intro h
+          rcases h with ⟨h_d_nonneg, h_d_div_m, h_d_div_n⟩
+          have hmod_cong_d : m ≡ m' [ZMOD d]
+            := Int.ModEq.of_dvd h_d_div_n hmod_cong
+          have h_d_div_m' : d ∣ m'
+            := by rw [Int.ModEq.dvd_iff hmod_cong_d] at h_d_div_m
+                  exact h_d_div_m
+          exact ⟨h_d_nonneg, h_d_div_m', h_d_div_n⟩
+        · intro h
+          rcases h with ⟨h_d_nonneg, h_d_div_m', h_d_div_n⟩
+          have hmod_cong_d : m ≡ m' [ZMOD d]
+            := Int.ModEq.of_dvd h_d_div_n hmod_cong
+          have h_d_div_m : d ∣ m
+            := by rw [← Int.ModEq.dvd_iff hmod_cong_d] at h_d_div_m'
+                  exact h_d_div_m'
+          exact ⟨h_d_nonneg, h_d_div_m, h_d_div_n⟩
+
+lemma common_divisor_symm {m n : ℤ}
+    (hm : 0 ≤ m) (hn : 0 ≤ n) :
+    CD m n hm hn = CD n m hn hm
+  := by dsimp [CD]
+        ext d
+        constructor
+        · intro h
+          rcases h with ⟨h_d_nonneg, h_d_div_m, h_d_div_n⟩
+          exact ⟨h_d_nonneg, h_d_div_n, h_d_div_m⟩
+        · intro h
+          rcases h with ⟨h_d_nonneg, h_d_div_n, h_d_div_m⟩
+          exact ⟨h_d_nonneg, h_d_div_m, h_d_div_n⟩
+
+----------------------------- Lecture 08 -----------------------------
+
+-- Lemma 73
+lemma common_divisor_rem_1 {m n : ℤ}
+    (hm : 0 < m) (hn : 0 < n) :
+    (hdiv : n ∣ m)
+    → (CD m n (Int.le_of_lt hm) (Int.le_of_lt hn))
+      = D n (Int.le_of_lt hn)
+  := by intro hdiv
+        dsimp [CD, D]
+        ext d
+        constructor
+        · intro h
+          rcases h with ⟨ h_d_nonneg, _, h_d_div_n ⟩
+          exact ⟨ h_d_nonneg, h_d_div_n ⟩
+        · intro h
+          rcases h with ⟨ h_d_nonneg, h_d_div_n ⟩
+          have h_d_div_m : d ∣ m
+            := h_d_div_n.trans hdiv
+          exact ⟨ h_d_nonneg, h_d_div_m, h_d_div_n ⟩
+
+theorem common_divisor_rem_2 {m n : ℤ}
+    (hm : 0 < m) (hn : 0 < n) :
+    (hndiv : ¬ (n ∣ m))
+    → (CD m n (Int.le_of_lt hm) (Int.le_of_lt hn))
+      = (CD n (rem m n (Int.le_of_lt hm) hn)
+              (Int.le_of_lt hn) (rem_nonneg m n (Int.le_of_lt hm) hn))
+  := by intro hndiv
+        let r := rem m n (Int.le_of_lt hm) hn
+        let hr := rem_nonneg m n (Int.le_of_lt hm) hn
+        have h_cd_symm :
+            (CD m n (Int.le_of_lt hm) (Int.le_of_lt hn))
+            = (CD n m (Int.le_of_lt hn) (Int.le_of_lt hm))
+          := common_divisor_symm (Int.le_of_lt hm) (Int.le_of_lt hn)
+        have hcong : m ≡ r [ZMOD n]
+          := modulo_arithmetic_nat (Int.le_of_lt hm) hn
+        have heq1 :
+            (CD m n (Int.le_of_lt hm) (Int.le_of_lt hn))
+            = (CD r n hr (Int.le_of_lt hn))
+          := common_divisor_mod (Int.le_of_lt hm) hr (Int.le_of_lt hn) hcong
+        have heq2 :
+            (CD r n hr (Int.le_of_lt hn))
+            = (CD n r (Int.le_of_lt hn) hr)
+          := common_divisor_symm hr (Int.le_of_lt hn)
+        have heq3 :
+            (CD m n (Int.le_of_lt hm) (Int.le_of_lt hn))
+             = (CD n r (Int.le_of_lt hn) hr)
+          := heq1.trans heq2
+        exact heq3
