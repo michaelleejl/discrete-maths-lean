@@ -244,3 +244,44 @@ theorem modulo_arithmetic_int {n k : ℤ} (h_pos : n > 0) :
            rw [← rem_is_identity_when_mltn d.rnat h_pos d.lt,
                ← cong_mod_iff_rem_eq hyzero d.rnat h_pos]
            exact hcong
+
+
+----------------------------- Lecture 07 -----------------------------
+
+-- Proposition 63
+theorem modulo_reciprocal {m k : ℤ}
+   (h_pos : m > 0) :
+   (∃ l, 0 ≤ l ∧ l < m ∧ k * l ≡ 1 [ZMOD m])
+   ↔ (∃ i j : ℤ, k * i + m  * j = 1)
+:= by constructor
+      · intro he
+        obtain ⟨ l, ⟨ _, _ , hl ⟩ ⟩ := he
+        have hdiv : ∃ a : ℤ, (k * l) - 1 = a * m
+          := by apply Int.ModEq.dvd at hl
+                obtain ⟨ b , hb ⟩ := hl
+                exists -b
+                linarith [hb]
+        obtain ⟨ a, ha ⟩ := hdiv
+        exists l, -a
+        linarith [ha]
+      · intro he
+        obtain ⟨ i, j, hlin ⟩ := he
+        have hdiv : m ∣ 1 - k * i
+            := by exists j
+                  linarith
+        have hmod : k * i ≡ 1 [ZMOD m]
+            := Int.modEq_iff_dvd.mpr hdiv
+        have hnorm : ∃! inorm, i ≡ inorm [ZMOD m]
+                             ∧ 0 ≤ inorm ∧ inorm < m
+            := modulo_arithmetic_int h_pos
+        obtain ⟨inorm, ⟨⟨inormcong, ⟨inormlb, inormub⟩⟩, _⟩⟩ := hnorm
+        exists inorm
+        have hmod' : k * i ≡ k * inorm [ZMOD m]
+            := Int.ModEq.mul_left k inormcong
+        have hmod'' : k * inorm ≡ 1 [ZMOD m]
+            := hmod'.symm.trans hmod
+        constructor
+        · exact inormlb
+        · constructor
+          · exact inormub
+          · exact hmod''
