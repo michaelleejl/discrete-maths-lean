@@ -48,19 +48,23 @@ def division_algorithm : (m : ℤ) → (n: ℤ) → (m ≥ 0) → (n > 0) → Qu
       ⟨q + 1, r, eq, hlt, hq, hrnat⟩
   termination_by m n _ _ => m.toNat
 
+@[simp]
 def quo : (m : ℤ) → (n : ℤ) → (m ≥ 0) → (n > 0) → ℤ :=
   fun m => fun n => fun pm => fun pn =>
     (division_algorithm m n pm pn).q
 
+@[simp]
 def quo_nonneg : (m : ℤ) → (n : ℤ) → (hm : m ≥ 0) → (hn : n > 0) →
                   0 ≤ (quo m n hm hn) :=
   fun m => fun n => fun pm => fun pn =>
     (division_algorithm m n pm pn).qnat
 
+@[simp]
 def rem : (m : ℤ) → (n : ℤ) → (m ≥ 0) → (n > 0) → ℤ :=
   fun m => fun n => fun pm => fun pn =>
     (division_algorithm m n pm pn).r
 
+@[simp]
 def rem_nonneg : (m : ℤ) → (n : ℤ) → (hm : m ≥ 0) → (hn : n > 0) →
                   0 ≤ (rem m n hm hn) :=
   fun m => fun n => fun pm => fun pn =>
@@ -108,8 +112,7 @@ theorem division_algorithm_result_unique {m n a b : ℤ}
    (hm : 0 ≤ m) (hn : 0 < n) (ha : 0 ≤ a) (hbl : 0 ≤ b) (hbu : b < n)
    (heq : m = a * n + b) :
     a = quo m n hm hn ∧ b = rem m n hm hn
- := by dsimp [rem, quo]
-       let res := division_algorithm m n hm hn
+ := by let res := division_algorithm m n hm hn
        let eq := res.eq
        have ⟨⟨q, r⟩, ⟨_, _, _, eq⟩, unique⟩ := division_theorem hm hn;
        have habqr : (a, b) = (q, r)
@@ -282,8 +285,7 @@ theorem modulo_arithmetic_int {n k : ℤ} (h_pos : n > 0) :
            · exact h_eq
            · constructor
              · exact d.rnat
-             · dsimp [rem]
-               linarith [d.lt]
+             · linarith [d.lt]
          · intro y ⟨hymod, hyzero, hylt⟩
            have hcong : y ≡ d.r [ZMOD n]
             := hymod.symm.trans h_eq
@@ -564,22 +566,110 @@ def euclid_algo : (m n : ℤ) → (hm : m > 0) → (hn : n > 0)
       simp_wf
       exact ⟨hlt, hn⟩
 
+@[simp] def gcd_comp (m n : ℤ) (hm : m > 0) (hn : n > 0) : ℤ
+  := (euclid_algo m n hm hn).d
+
+
+@[simp] def gcd_comp_is_pos (m n : ℤ) (hm : m > 0) (hn : n > 0) :
+    0 < (gcd_comp m n hm hn)
+  := (euclid_algo m n hm hn).hd
+
 -- Theorem 78
 theorem euclid_algo_computes_gcd (m n : ℤ) (hm : m > 0) (hn : n > 0) :
-    is_gcd ((euclid_algo m n hm hn).d) m n ((euclid_algo m n hm hn).hd) hm hn
+    is_gcd (gcd_comp m n hm hn) m n (gcd_comp_is_pos m n hm hn) hm hn
   := by dsimp [is_gcd]
         let ⟨ d, hd, hgcd ⟩ := euclid_algo m n hm hn
         rw [defs_of_gcd_equiv (Int.le_of_lt hm) (Int.le_of_lt hn) (Int.le_of_lt hd)]
         exact hgcd
 
+lemma dvd_gcd_comp {d m n : ℤ} (hd : d > 0) (hm : m > 0) (hn : n > 0) :
+    d ∣ (gcd_comp m n hm hn) ↔ d ∣ m ∧ d ∣ n
+  := by dsimp [gcd_comp]
+        let e := euclid_algo m n hm hn
+        let gd := e.d
+        let hgd := e.hgcd
+        constructor
+        · intro hdvd
+          dsimp [CD, D] at hgd
+          rw [Set.ext_iff] at hgd
+          simp only [Set.mem_setOf_eq, and_congr_right_iff] at hgd
+          specialize hgd d
+          have h_iff : d ∣ m ∧ d ∣ n ↔ d ∣ gd := hgd (Int.le_of_lt hd)
+          rw [h_iff]
+          exact hdvd
+        · intro ⟨ hdvdm, hdvdn ⟩
+          let hup : ∀ (d : ℤ), 0 ≤ d → d ∣ m ∧ d ∣ n → d ∣ gd
+              := by rw [← defs_of_gcd_equiv (Int.le_of_lt hm) (Int.le_of_lt hn)] at hgd
+                    exact hgd.2.2
+          specialize hup d
+          have h_exact : d ∣ gd
+            := hup (Int.le_of_lt hd) ⟨ hdvdm, hdvdn ⟩
+          exact h_exact
+
 -- Lemma 80
-lemma gcd_commutative (k m n : ℤ) (hk : k > 0) (hm : m > 0) (hn : n > 0) :
-    is_gcd k m n hk hm hn ↔ is_gcd k n m hk hn hm
-:= by dsimp [is_gcd]
-      rw [defs_of_gcd_equiv (Int.le_of_lt hm) (Int.le_of_lt hn) (Int.le_of_lt hk)]
-      rw [defs_of_gcd_equiv (Int.le_of_lt hn) (Int.le_of_lt hm) (Int.le_of_lt hk)]
+lemma gcd_commutative (m n : ℤ) (hm : 0 < m) (hn : 0 < n) :
+    gcd_comp m n hm hn = gcd_comp n m hn hm
+:= by dsimp [gcd_comp]
+      let ⟨d₁, h_d₁, h_eq₁⟩ := euclid_algo m n hm hn
+      let ⟨d₂, h_d₂, h_eq₂⟩ := euclid_algo n m hn hm
+      simp only
       suffices h :
         CD m n (Int.le_of_lt hm) (Int.le_of_lt hn)
         = CD n m (Int.le_of_lt hn) (Int.le_of_lt hm)
-        by rw [h]
+        by have h' : CD m n (Int.le_of_lt hm) (Int.le_of_lt hn)
+                     = D d₂ (Int.le_of_lt h_d₂)
+                    := by rw [← h] at h_eq₂; exact h_eq₂
+           apply uniqueness_of_gcd (Int.le_of_lt hm) (Int.le_of_lt hn)
+            (Int.le_of_lt h_d₁) (Int.le_of_lt h_d₂) h_eq₁ h'
       exact common_divisor_symm (Int.le_of_lt hm) (Int.le_of_lt hn)
+
+theorem gcd_associative (l m n : ℤ)
+    (hl : l > 0) (hm : m > 0) (hn : n > 0) :
+    gcd_comp l (gcd_comp m n hm hn) hl (gcd_comp_is_pos m n hm hn)
+    = gcd_comp (gcd_comp l m hl hm)  n (gcd_comp_is_pos l m hl hm) hn
+  := by
+        simp only [gcd_comp]
+        -- gcd(m, n)
+        let e_mn := euclid_algo m n hm hn
+        let d_mn := e_mn.d
+        let hd_mn := e_mn.hd
+        let hgcd_dmn := euclid_algo_computes_gcd m n hm hn
+        dsimp [is_gcd] at hgcd_dmn
+        let ⟨dmn_dvd_m, dmn_dvd_dn, gcdup_dmn⟩ := hgcd_dmn
+        -- gcd(l, m)
+        let e_lm := euclid_algo l m hl hm
+        let d_lm := e_lm.d
+        let hd_lm := e_lm.hd
+        let hgcd_dlm := euclid_algo_computes_gcd l m hl hm
+        dsimp [is_gcd] at hgcd_dlm
+        let ⟨dlm_dvd_l, dlm_dvd_dm, gcdup_dlm⟩ := hgcd_dlm
+        -- gcd (l, gcd(m, n))
+        let e1 := euclid_algo l d_mn hl hd_mn
+        let d1 := e1.d
+        let h_d1 := e1.hd
+        let hgcd_d1 := euclid_algo_computes_gcd l d_mn hl hd_mn
+        dsimp [is_gcd] at hgcd_d1
+        let ⟨d1_dvd_l, d1_dvd_dmn, gcdup_d1⟩ := hgcd_d1
+        -- gcd (gcd(l, m), n)
+        let e2 := euclid_algo d_lm n hd_lm hn
+        let d2 := e2.d
+        let h_d2 := e2.hd
+        let hgcd_d2 := euclid_algo_computes_gcd d_lm n hd_lm hn
+        let ⟨d2_dvd_dlm, d2_dvd_n, gcdup_d2⟩ := hgcd_d2
+        have h_d1_dvd_d2 : d1 ∣ d2
+          := by have ⟨ d1_dvd_m, d1_dvd_n ⟩
+                  := (dvd_gcd_comp h_d1 hm hn).mp d1_dvd_dmn
+                specialize gcdup_dlm d1
+                have d1_dvd_dlm : d1 ∣ d_lm
+                  := gcdup_dlm (Int.le_of_lt h_d1) ⟨ d1_dvd_l, d1_dvd_m ⟩
+                specialize gcdup_d2 d1
+                exact gcdup_d2 (Int.le_of_lt h_d1) ⟨ d1_dvd_dlm, d1_dvd_n ⟩
+        have h_d2_dvd_d1 : d2 ∣ d1
+          := by have ⟨ d2_dvd_l, d2_dvd_m ⟩
+                  := (dvd_gcd_comp h_d2 hl hm).mp d2_dvd_dlm
+                specialize gcdup_dmn d2
+                have d2_dvd_dmn : d2 ∣ d_mn
+                  := gcdup_dmn (Int.le_of_lt h_d2) ⟨ d2_dvd_m, d2_dvd_n ⟩
+                specialize gcdup_d1 d2
+                exact gcdup_d1 (Int.le_of_lt h_d2) ⟨ d2_dvd_l, d2_dvd_dmn ⟩
+        exact Int.dvd_antisymm (Int.le_of_lt h_d1) (Int.le_of_lt h_d2) h_d1_dvd_d2 h_d2_dvd_d1
