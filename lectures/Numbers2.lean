@@ -404,6 +404,10 @@ theorem common_divisor_rem_2 {m n : ℤ}
           := heq1.trans heq2
         exact heq3
 
+def is_gcd (k m n : ℤ) (_hm : 0 ≤ m) (_hn : 0 ≤ n) (_hk : 0 ≤ k) : Prop
+  := k ∣ m ∧ k ∣ n ∧
+     ∀ (d : ℤ), 0 ≤ d → d ∣ m ∧ d ∣ n → d ∣ k
+
 -- Euclid's Algorithm
 structure GCDState (m n : ℤ) where
   d : ℤ
@@ -411,7 +415,7 @@ structure GCDState (m n : ℤ) where
   hn : d ∣ n
   greatest : ∀ d', d' ∣ m ∧ d' ∣ n → d' ∣ d
 
-def gcd : (m n : ℤ) → (hm : m ≥ 0) → (hn : n > 0) → GCDState m n
+def euclid_algo : (m n : ℤ) → (hm : m ≥ 0) → (hn : n > 0) → GCDState m n
   := fun m => fun n => fun hm => fun hn =>
       let ⟨ q, r, heq, hlt, hqnat, hrnat ⟩
         := division_algorithm m n hm hn;
@@ -426,7 +430,7 @@ def gcd : (m n : ℤ) → (hm : m ≥ 0) → (hn : n > 0) → GCDState m n
         ⟨n, hm, hn, hg⟩
       else
         have hr : r > 0 := lt_of_le_of_ne hrnat h
-        let ⟨d, hdn, hdr, hg⟩ := gcd n r (Int.le_of_lt hn) hr;
+        let ⟨d, hdn, hdr, hg⟩ := euclid_algo n r (Int.le_of_lt hn) hr;
         have hdm : d ∣ m := by rw [heq, ← one_mul r]
                                apply dvd_linear_comb hdn hdr
         have hg : ∀ d', d' ∣ m ∧ d' ∣ n → d' ∣ d
@@ -444,4 +448,68 @@ def gcd : (m n : ℤ) → (hm : m ≥ 0) → (hn : n > 0) → GCDState m n
       exact ⟨hlt, hn⟩
 
 -- Example 74
-#eval (gcd 34 13 (by norm_num) (by norm_num)).d
+#eval (euclid_algo 34 13 (by norm_num) (by norm_num)).d
+
+-- Proposition 75
+theorem uniqueness_of_gcd {m n a b : ℤ}
+    (hm : 0 ≤ m) (hn : 0 ≤ n) (ha : 0 ≤ a) (hb : 0 ≤ b) :
+    CD m n hm hn = D a ha → CD m n hm hn = D b hb
+    → a = b
+  := by
+    dsimp [CD, D]
+    intro cd_eq_da cd_eq_db
+    have div_cd_iff_div_a : ∀ d : ℤ, 0 ≤ d → (d ∣ m ∧ d ∣ n ↔ d ∣ a)
+      := by intro d hd0
+            rw [Set.ext_iff] at cd_eq_da
+            simp only [Set.mem_setOf_eq, and_congr_right_iff] at cd_eq_da
+            apply cd_eq_da d hd0
+    have div_cd_iff_div_b : ∀ d : ℤ, 0 ≤ d → (d ∣ m ∧ d ∣ n ↔ d ∣ b)
+      := by intro d hd0
+            rw [Set.ext_iff] at cd_eq_db
+            simp only [Set.mem_setOf_eq, and_congr_right_iff] at cd_eq_db
+            apply cd_eq_db d hd0
+    have div_a_iff_div_b : ∀ d : ℤ, 0 ≤ d → (d ∣ a ↔ d ∣ b) := by
+      intro d hd0
+      exact ((div_cd_iff_div_a d hd0).symm).trans (div_cd_iff_div_b d hd0)
+    have a_dvd_b : a ∣ b := (div_a_iff_div_b a ha).mp (dvd_refl a)
+    have b_dvd_a : b ∣ a := (div_a_iff_div_b b hb).mpr (dvd_refl b)
+    exact Int.dvd_antisymm ha hb a_dvd_b b_dvd_a
+
+-- Proposition 76
+theorem defs_of_gcd_equiv {m n k : ℤ}
+    (hm : 0 ≤ m) (hn : 0 ≤ n) (hk : 0 ≤ k) :
+     (k ∣ m ∧ k ∣ n ∧ ∀ (d : ℤ), 0 ≤ d → d ∣ m ∧ d ∣ n → d ∣ k)
+     ↔ CD m n hm hn = D k hk
+  := by dsimp [CD, D]
+        constructor
+        · intro ⟨hkdivm, hkdivn, hkgreatest⟩
+          ext d
+          simp only [Set.mem_setOf_eq, and_congr_right_iff]
+          intro hd0
+          specialize hkgreatest d
+          constructor
+          · exact hkgreatest hd0
+          · intro hddivk
+            exact ⟨hddivk.trans hkdivm, hddivk.trans hkdivn⟩
+        · intro hdef2
+          rw [Set.ext_iff] at hdef2
+          constructor
+          · specialize hdef2 k
+            simp only [Set.mem_setOf_eq, hk, true_and] at hdef2
+            have hrefl : k ∣ k := by trivial
+            have ⟨hdivm, hdivn⟩ : k ∣ m ∧ k ∣ n := by rw [hdef2]
+            exact hdivm
+          · constructor
+            · specialize hdef2 k
+              simp only [Set.mem_setOf_eq, hk, true_and] at hdef2
+              have hrefl : k ∣ k := by trivial
+              have ⟨hdivm, hdivn⟩ : k ∣ m ∧ k ∣ n := by rw [hdef2]
+              exact hdivn
+            · intro d hd
+              specialize hdef2 d
+              simp only [Set.mem_setOf_eq, hd, true_and] at hdef2
+              exact hdef2.mp
+
+def gcd : (m n : ℤ) → (hm : m ≥ 0) → (hn : n > 0) → ℤ
+  := fun m => fun n => fun hm => fun hn =>
+      (euclid_algo m n hm hn).d
