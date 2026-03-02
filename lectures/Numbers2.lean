@@ -52,6 +52,11 @@ def quo : (m : ℤ) → (n : ℤ) → (m ≥ 0) → (n > 0) → ℤ :=
   fun m => fun n => fun pm => fun pn =>
     (division_algorithm m n pm pn).q
 
+def quo_nonneg : (m : ℤ) → (n : ℤ) → (hm : m ≥ 0) → (hn : n > 0) →
+                  0 ≤ (quo m n hm hn) :=
+  fun m => fun n => fun pm => fun pn =>
+    (division_algorithm m n pm pn).qnat
+
 def rem : (m : ℤ) → (n : ℤ) → (m ≥ 0) → (n > 0) → ℤ :=
   fun m => fun n => fun pm => fun pn =>
     (division_algorithm m n pm pn).r
@@ -99,36 +104,46 @@ theorem division_theorem {m n : ℤ} (hmnonneg : m ≥ 0) (hnpos : n > 0) :
                 · exact h7
                 · exact h6
 
-theorem rem_eq_zero_iff_dvd {m n : ℤ} (hm : m ≥ 0) (hn : n > 0) :
+theorem division_algorithm_result_unique {m n a b : ℤ}
+   (hm : 0 ≤ m) (hn : 0 < n) (ha : 0 ≤ a) (hbl : 0 ≤ b) (hbu : b < n)
+   (heq : m = a * n + b) :
+    a = quo m n hm hn ∧ b = rem m n hm hn
+ := by dsimp [rem, quo]
+       let res := division_algorithm m n hm hn
+       let eq := res.eq
+       have ⟨⟨q, r⟩, ⟨_, _, _, eq⟩, unique⟩ := division_theorem hm hn;
+       have habqr : (a, b) = (q, r)
+        := unique (a, b) ⟨ha, hbl, hbu, heq⟩;
+       have hquoremqr : (res.q, res.r) = (q, r)
+        := unique (res.q, res.r) ⟨res.qnat, res.rnat, res.lt, res.eq⟩;
+       have ⟨h_a_eq_q, h_b_eq_r⟩ := Prod.mk.inj habqr
+       have ⟨h_quo_eq_q, h_rem_eq_r⟩ := Prod.mk.inj hquoremqr
+       exact ⟨h_a_eq_q.trans h_quo_eq_q.symm,
+              h_b_eq_r.trans h_rem_eq_r.symm ⟩
+
+theorem rem_eq_zero_iff_dvd {m n : ℤ} (hm : 0 ≤ m) (hn : 0 < n) :
     rem m n hm hn = 0 ↔ n ∣ m
- := by constructor
+ := by let res := division_algorithm m n hm hn
+       let eq := res.eq
+       let q := res.q
+       let r := res.r
+       constructor
        · intro heq
          dsimp [rem] at heq
-         let res := division_algorithm m n hm hn
-         let eq := res.eq
-         let q := res.q
          rw [heq, add_zero, mul_comm] at eq
          exact ⟨q, eq⟩
-       · intro ⟨k, hk⟩
-         dsimp [rem]
-         have hnk_nonneg : k * n ≥ 0
-          := calc
-            k * n = n * k := mul_comm k n
-            _ = m := by rw [hk]
-                 _ ≥ 0 := hm
-         have hk_nonneg : k ≥ 0
-          := nonneg_of_mul_nonneg_left hnk_nonneg hn
-         have ⟨⟨q, r⟩, ⟨_, _, _, eq⟩, unique⟩ := division_theorem hm hn
-         have hk_expanded : m = k * n + 0 := by rw [add_zero, mul_comm]
-                                                exact hk
-         have hk0qr : (k, 0) = (q, r)
-          := unique (k, 0) ⟨hk_nonneg, le_refl 0, hn, hk_expanded⟩
-         let res := division_algorithm m n hm hn
-         have hremqr : (res.q, res.r) = (q, r)
-          := unique (res.q, res.r) ⟨res.qnat, res.rnat, res.lt, res.eq⟩
-         have hrem : res.r = r := (Prod.mk.inj hremqr).2
-         have h0r : 0 = r := (Prod.mk.inj hk0qr).2
-         exact hrem.trans h0r.symm
+       · intro h_n_div_m
+         obtain ⟨ a, ha ⟩ := h_n_div_m
+         have h_eq : m = a * n + 0
+            := by rw [mul_comm, ← add_zero (a*n)] at ha
+                  exact ha
+         have hal : 0 ≤ a
+          := by rw [h_eq, add_zero] at hm
+                rw [mul_nonneg_iff_left_nonneg_of_pos hn] at hm
+                exact hm
+         have ⟨hquo, hrem⟩ : a = q ∧ 0 = r
+          := division_algorithm_result_unique hm hn hal (Int.le_refl 0) hn h_eq
+         exact hrem.symm
 
 -- Proposition 57
 theorem cong_mod_iff_rem_eq {k l m : ℤ}
@@ -558,7 +573,6 @@ theorem euclid_algo_computes_gcd (m n : ℤ) (hm : m > 0) (hn : n > 0) :
         exact hgcd
 
 -- Lemma 80
-
 lemma gcd_commutative (k m n : ℤ) (hk : k > 0) (hm : m > 0) (hn : n > 0) :
     is_gcd k m n hk hm hn ↔ is_gcd k n m hk hn hm
 := by dsimp [is_gcd]
