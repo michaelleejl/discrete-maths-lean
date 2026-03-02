@@ -477,7 +477,7 @@ theorem uniqueness_of_gcd {m n a b : ℤ}
 
 -- Proposition 76
 theorem defs_of_gcd_equiv {m n k : ℤ}
-    (hm : 0 ≤ m) (hn : 0 ≤ n) (hk : 0 ≤ k) :
+    (hm : 0 ≤ m) (hn : 0 ≤ n) (hk : 0 ≤ k):
      (k ∣ m ∧ k ∣ n ∧ ∀ (d : ℤ), 0 ≤ d → d ∣ m ∧ d ∣ n → d ∣ k)
      ↔ CD m n hm hn = D k hk
   := by dsimp [CD, D]
@@ -493,18 +493,14 @@ theorem defs_of_gcd_equiv {m n k : ℤ}
             exact ⟨hddivk.trans hkdivm, hddivk.trans hkdivn⟩
         · intro hdef2
           rw [Set.ext_iff] at hdef2
+          have hdef2k := hdef2 k
+          simp only [Set.mem_setOf_eq, hk, true_and] at hdef2k
+          have hrefl : k ∣ k := by trivial
+          have ⟨hdivm, hdivn⟩ : k ∣ m ∧ k ∣ n := by rw [hdef2k]
           constructor
-          · specialize hdef2 k
-            simp only [Set.mem_setOf_eq, hk, true_and] at hdef2
-            have hrefl : k ∣ k := by trivial
-            have ⟨hdivm, hdivn⟩ : k ∣ m ∧ k ∣ n := by rw [hdef2]
-            exact hdivm
+          ·exact hdivm
           · constructor
-            · specialize hdef2 k
-              simp only [Set.mem_setOf_eq, hk, true_and] at hdef2
-              have hrefl : k ∣ k := by trivial
-              have ⟨hdivm, hdivn⟩ : k ∣ m ∧ k ∣ n := by rw [hdef2]
-              exact hdivn
+            · exact hdivn
             · intro d hd
               specialize hdef2 d
               simp only [Set.mem_setOf_eq, hd, true_and] at hdef2
