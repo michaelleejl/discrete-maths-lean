@@ -118,14 +118,17 @@ theorem rem_eq_zero_iff_dvd {m n : ℤ} (hm : m ≥ 0) (hn : n > 0) :
                  _ ≥ 0 := hm
          have hk_nonneg : k ≥ 0
           := nonneg_of_mul_nonneg_left hnk_nonneg hn
-         have heu := division_theorem hm hn
-         rcases heu with ⟨⟨q, r⟩, ⟨_, _, _, eq⟩, unique⟩
-         have hk
-          := unique (k, 0) ⟨hk_nonneg, le_refl 0, hn, by rw [hk, Int.mul_comm, add_zero]⟩
+         have ⟨⟨q, r⟩, ⟨_, _, _, eq⟩, unique⟩ := division_theorem hm hn
+         have hk_expanded : m = k * n + 0 := by rw [add_zero, mul_comm]
+                                                exact hk
+         have hk0qr : (k, 0) = (q, r)
+          := unique (k, 0) ⟨hk_nonneg, le_refl 0, hn, hk_expanded⟩
          let res := division_algorithm m n hm hn
-         have hrem
+         have hremqr : (res.q, res.r) = (q, r)
           := unique (res.q, res.r) ⟨res.qnat, res.rnat, res.lt, res.eq⟩
-         exact (Prod.mk.inj hrem).2.trans (Prod.mk.inj hk).2.symm
+         have hrem : res.r = r := (Prod.mk.inj hremqr).2
+         have h0r : 0 = r := (Prod.mk.inj hk0qr).2
+         exact hrem.trans h0r.symm
 
 -- Proposition 57
 theorem cong_mod_iff_rem_eq {k l m : ℤ}
@@ -507,6 +510,10 @@ theorem defs_of_gcd_equiv {m n k : ℤ}
               simp only [Set.mem_setOf_eq, hd, true_and] at hdef2
               exact hdef2.mp
 
+-- Definition 77
+def is_gcd (k m n : ℤ) (_hk : k ≥ 0) (_hm : m ≥ 0) (_hn : n > 0) : Prop
+  := k ∣ m ∧ k ∣ n ∧ ∀ (d : ℤ), 0 ≤ d → d ∣ m ∧ d ∣ n → d ∣ k
+
 structure GCDState (m n : ℤ) (hm : 0 ≤ m) (hn : 0 ≤ n) where
   d : ℤ
   hd : 0 ≤ d
@@ -542,6 +549,10 @@ def euclid_algo : (m n : ℤ) → (hm : m ≥ 0) → (hn : n > 0)
       simp_wf
       exact ⟨hlt, hn⟩
 
-def gcd : (m n : ℤ) → (hm : m ≥ 0) → (hn : n > 0) → ℤ
-  := fun m => fun n => fun hm => fun hn =>
-      (euclid_algo m n hm hn).d
+-- Theorem 78
+theorem euclid_algo_computes_gcd (m n : ℤ) (hm : m ≥ 0) (hn : n > 0) :
+    is_gcd ((euclid_algo m n hm hn).d) m n ((euclid_algo m n hm hn).hd) hm hn
+  := by dsimp [is_gcd]
+        let ⟨ d, hd, hgcd ⟩ := euclid_algo m n hm hn
+        rw [defs_of_gcd_equiv hm (Int.le_of_lt hn) hd]
+        exact hgcd
