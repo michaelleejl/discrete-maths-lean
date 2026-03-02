@@ -99,6 +99,34 @@ theorem division_theorem {m n : ℤ} (hmnonneg : m ≥ 0) (hnpos : n > 0) :
                 · exact h7
                 · exact h6
 
+theorem rem_eq_zero_iff_dvd {m n : ℤ} (hm : m ≥ 0) (hn : n > 0) :
+    rem m n hm hn = 0 ↔ n ∣ m
+ := by constructor
+       · intro heq
+         dsimp [rem] at heq
+         let res := division_algorithm m n hm hn
+         let eq := res.eq
+         let q := res.q
+         rw [heq, add_zero, mul_comm] at eq
+         exact ⟨q, eq⟩
+       · intro ⟨k, hk⟩
+         dsimp [rem]
+         have hnk_nonneg : k * n ≥ 0
+          := calc
+            k * n = n * k := mul_comm k n
+            _ = m := by rw [hk]
+                 _ ≥ 0 := hm
+         have hk_nonneg : k ≥ 0
+          := nonneg_of_mul_nonneg_left hnk_nonneg hn
+         have heu := division_theorem hm hn
+         rcases heu with ⟨⟨q, r⟩, ⟨_, _, _, eq⟩, unique⟩
+         have hk
+          := unique (k, 0) ⟨hk_nonneg, le_refl 0, hn, by rw [hk, Int.mul_comm, add_zero]⟩
+         let res := division_algorithm m n hm hn
+         have hrem
+          := unique (res.q, res.r) ⟨res.qnat, res.rnat, res.lt, res.eq⟩
+         exact (Prod.mk.inj hrem).2.trans (Prod.mk.inj hk).2.symm
+
 -- Proposition 57
 theorem cong_mod_iff_rem_eq {k l m : ℤ}
     (hknonneg : k ≥ 0) (hlnonneg : l ≥ 0) (hmpos : m > 0) :
@@ -358,9 +386,9 @@ lemma common_divisor_symm {m n : ℤ}
 
 -- Lemma 73
 lemma common_divisor_rem_1 {m n : ℤ}
-    (hm : 0 < m) (hn : 0 < n) :
+    (hm : 0 ≤ m) (hn : 0 < n) :
     (hdiv : n ∣ m)
-    → (CD m n (Int.le_of_lt hm) (Int.le_of_lt hn))
+    → (CD m n hm (Int.le_of_lt hn))
       = D n (Int.le_of_lt hn)
   := by intro hdiv
         dsimp [CD, D]
@@ -376,79 +404,52 @@ lemma common_divisor_rem_1 {m n : ℤ}
           exact ⟨ h_d_nonneg, h_d_div_m, h_d_div_n ⟩
 
 theorem common_divisor_rem_2 {m n : ℤ}
-    (hm : 0 < m) (hn : 0 < n) :
+    (hm : 0 ≤ m) (hn : 0 < n) :
     (hndiv : ¬ (n ∣ m))
-    → (CD m n (Int.le_of_lt hm) (Int.le_of_lt hn))
-      = (CD n (rem m n (Int.le_of_lt hm) hn)
-              (Int.le_of_lt hn) (rem_nonneg m n (Int.le_of_lt hm) hn))
+    → (CD m n hm (Int.le_of_lt hn))
+      = (CD n (rem m n hm hn)
+              (Int.le_of_lt hn) (rem_nonneg m n hm hn))
   := by intro hndiv
-        let r := rem m n (Int.le_of_lt hm) hn
-        let hr := rem_nonneg m n (Int.le_of_lt hm) hn
+        let r := rem m n hm hn
+        let hr := rem_nonneg m n hm hn
         have h_cd_symm :
-            (CD m n (Int.le_of_lt hm) (Int.le_of_lt hn))
-            = (CD n m (Int.le_of_lt hn) (Int.le_of_lt hm))
-          := common_divisor_symm (Int.le_of_lt hm) (Int.le_of_lt hn)
+            (CD m n hm (Int.le_of_lt hn))
+            = (CD n m (Int.le_of_lt hn) hm)
+          := common_divisor_symm hm (Int.le_of_lt hn)
         have hcong : m ≡ r [ZMOD n]
-          := modulo_arithmetic_nat (Int.le_of_lt hm) hn
+          := modulo_arithmetic_nat hm hn
         have heq1 :
-            (CD m n (Int.le_of_lt hm) (Int.le_of_lt hn))
+            (CD m n hm (Int.le_of_lt hn))
             = (CD r n hr (Int.le_of_lt hn))
-          := common_divisor_mod (Int.le_of_lt hm) hr (Int.le_of_lt hn) hcong
+          := common_divisor_mod hm hr (Int.le_of_lt hn) hcong
         have heq2 :
             (CD r n hr (Int.le_of_lt hn))
             = (CD n r (Int.le_of_lt hn) hr)
           := common_divisor_symm hr (Int.le_of_lt hn)
         have heq3 :
-            (CD m n (Int.le_of_lt hm) (Int.le_of_lt hn))
+            (CD m n hm (Int.le_of_lt hn))
              = (CD n r (Int.le_of_lt hn) hr)
           := heq1.trans heq2
         exact heq3
 
-def is_gcd (k m n : ℤ) (_hm : 0 ≤ m) (_hn : 0 ≤ n) (_hk : 0 ≤ k) : Prop
-  := k ∣ m ∧ k ∣ n ∧
-     ∀ (d : ℤ), 0 ≤ d → d ∣ m ∧ d ∣ n → d ∣ k
-
--- Euclid's Algorithm
-structure GCDState (m n : ℤ) where
-  d : ℤ
-  hm : d ∣ m
-  hn : d ∣ n
-  greatest : ∀ d', d' ∣ m ∧ d' ∣ n → d' ∣ d
-
-def euclid_algo : (m n : ℤ) → (hm : m ≥ 0) → (hn : n > 0) → GCDState m n
+-- Euclid's Algorithm (simple)
+def euclid_algo_simp : (m n : ℤ) → (hm : m ≥ 0) → (hn : n > 0) → ℤ
   := fun m => fun n => fun hm => fun hn =>
       let ⟨ q, r, heq, hlt, hqnat, hrnat ⟩
         := division_algorithm m n hm hn;
       if h : 0 = r then
-        have hn : n ∣ n := by trivial
-        have hm : n ∣ m := by rw [← h] at heq
-                              exists q
-                              linarith
-        have hg : ∀ d', d' ∣ m ∧ d' ∣ n → d' ∣ n
-          := by intro d' ⟨ hdivm, hdivn ⟩
-                exact hdivn
-        ⟨n, hm, hn, hg⟩
+        n
       else
         have hr : r > 0 := lt_of_le_of_ne hrnat h
-        let ⟨d, hdn, hdr, hg⟩ := euclid_algo n r (Int.le_of_lt hn) hr;
-        have hdm : d ∣ m := by rw [heq, ← one_mul r]
-                               apply dvd_linear_comb hdn hdr
-        have hg : ∀ d', d' ∣ m ∧ d' ∣ n → d' ∣ d
-          := by intro d' ⟨ hdivm, hdivn ⟩
-                have hdivr : d' ∣ r
-                  := by have heq': 1 * m + (-q) * n = r := by linarith
-                        rw [← heq']
-                        apply dvd_linear_comb hdivm hdivn
-                specialize hg d'
-                apply hg ⟨hdivn, hdivr⟩
-        ⟨d, hdm, hdn, hg⟩
+        let d := euclid_algo_simp n r (Int.le_of_lt hn) hr;
+        d
     termination_by m n _ _ => n.toNat
     decreasing_by
       simp_wf
       exact ⟨hlt, hn⟩
 
 -- Example 74
-#eval (euclid_algo 34 13 (by norm_num) (by norm_num)).d
+#eval euclid_algo_simp 34 13 (by norm_num) (by norm_num)
 
 -- Proposition 75
 theorem uniqueness_of_gcd {m n a b : ℤ}
@@ -505,6 +506,41 @@ theorem defs_of_gcd_equiv {m n k : ℤ}
               specialize hdef2 d
               simp only [Set.mem_setOf_eq, hd, true_and] at hdef2
               exact hdef2.mp
+
+structure GCDState (m n : ℤ) (hm : 0 ≤ m) (hn : 0 ≤ n) where
+  d : ℤ
+  hd : 0 ≤ d
+  hgcd : CD m n hm hn = D d hd
+
+def euclid_algo : (m n : ℤ) → (hm : m ≥ 0) → (hn : n > 0)
+                  → GCDState m n hm (Int.le_of_lt hn)
+  := fun m => fun n => fun hm => fun hn =>
+      let res := division_algorithm m n hm hn;
+      let q := res.q
+      let r := res.r
+      have heq := res.eq
+      have hlt := res.lt
+      have hrnat := res.rnat
+      have hrfl : r = res.r
+        := by rfl
+      if h : r = 0 then
+         have hndvdm : n ∣ m
+            := by rw [← hrfl, h, add_zero, mul_comm] at heq
+                  exists q
+        ⟨n, (Int.le_of_lt hn), common_divisor_rem_1 hm hn hndvdm⟩
+      else
+        have hr : 0 < r := lt_of_le_of_ne hrnat (fun hr0 => h hr0.symm)
+        let ⟨d, hd, hgcd⟩ := euclid_algo n r (Int.le_of_lt hn) hr;
+        have h_n_not_div_m : ¬ (n ∣ m)
+          := (rem_eq_zero_iff_dvd hm hn).not.mp h
+        have hlem :
+          CD m n hm (Int.le_of_lt hn) = CD n res.r (Int.le_of_lt hn) hrnat
+          := common_divisor_rem_2 hm hn h_n_not_div_m
+        ⟨d, hd, hlem.trans hgcd⟩
+    termination_by m n _ _ => n.toNat
+    decreasing_by
+      simp_wf
+      exact ⟨hlt, hn⟩
 
 def gcd : (m n : ℤ) → (hm : m ≥ 0) → (hn : n > 0) → ℤ
   := fun m => fun n => fun hm => fun hn =>
