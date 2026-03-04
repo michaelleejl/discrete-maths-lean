@@ -389,6 +389,11 @@ lemma common_divisor_mod {m m' n : ℤ}
                   exact h_d_div_m'
           exact ⟨h_d_nonneg, h_d_div_m, h_d_div_n⟩
 
+lemma common_divisor_refl {m n : ℤ}
+    (hm : 0 ≤ m) (hn : 0 ≤ n) :
+    CD m n hm hn = CD m n hm hn
+  := by dsimp [CD]
+
 lemma common_divisor_symm {m n : ℤ}
     (hm : 0 ≤ m) (hn : 0 ≤ n) :
     CD m n hm hn = CD n m hn hm
@@ -610,17 +615,17 @@ lemma dvd_gcd_comp {d m n : ℤ} (hd : d > 0) (hm : m > 0) (hn : n > 0) :
 lemma gcd_commutative (m n : ℤ) (hm : 0 < m) (hn : 0 < n) :
     gcd_comp m n hm hn = gcd_comp n m hn hm
 := by dsimp [gcd_comp]
-      let ⟨d₁, h_d₁, h_eq₁⟩ := euclid_algo m n hm hn
-      let ⟨d₂, h_d₂, h_eq₂⟩ := euclid_algo n m hn hm
+      let ⟨d1, h_d1, h_eq1⟩ := euclid_algo m n hm hn
+      let ⟨d2, h_d2, h_eq2⟩ := euclid_algo n m hn hm
       simp only
       suffices h :
         CD m n (Int.le_of_lt hm) (Int.le_of_lt hn)
         = CD n m (Int.le_of_lt hn) (Int.le_of_lt hm)
         by have h' : CD m n (Int.le_of_lt hm) (Int.le_of_lt hn)
-                     = D d₂ (Int.le_of_lt h_d₂)
-                    := by rw [← h] at h_eq₂; exact h_eq₂
+                     = D d2 (Int.le_of_lt h_d2)
+                    := by rw [← h] at h_eq2; exact h_eq2
            apply uniqueness_of_gcd (Int.le_of_lt hm) (Int.le_of_lt hn)
-            (Int.le_of_lt h_d₁) (Int.le_of_lt h_d₂) h_eq₁ h'
+            (Int.le_of_lt h_d1) (Int.le_of_lt h_d2) h_eq1 h'
       exact common_divisor_symm (Int.le_of_lt hm) (Int.le_of_lt hn)
 
 theorem gcd_associative (l m n : ℤ)
@@ -673,3 +678,62 @@ theorem gcd_associative (l m n : ℤ)
                 specialize gcdup_d1 d2
                 exact gcdup_d1 (Int.le_of_lt h_d2) ⟨ d2_dvd_l, d2_dvd_dmn ⟩
         exact Int.dvd_antisymm (Int.le_of_lt h_d1) (Int.le_of_lt h_d2) h_d1_dvd_d2 h_d2_dvd_d1
+
+structure ExtendedGCDState (m n : ℤ) (hm : 0 < m) (hn : 0 < n) where
+  s : ℤ
+  t : ℤ
+  r : ℤ
+  hr : r > 0
+  hlin : r = s * m + t * n
+  hgcd : CD m n (Int.le_of_lt hm) (Int.le_of_lt hn) = D r (Int.le_of_lt hr)
+
+def gcd_iter (m n : ℤ) (hm : m > 0) (hn : n > 0) :
+    (s1 t1 r1 s2 t2 r2: ℤ)
+  → (hr1 : r1 > 0) → (hr2 : r2 > 0)
+  → (hlin1 : r1 = s1 * m + t1 * n)
+  → (hlin2 : r2 = s2 * m + t2 * n)
+  → (hcd : CD m n (Int.le_of_lt hm) (Int.le_of_lt hn)
+          = CD r1 r2 (Int.le_of_lt hr1) (Int.le_of_lt hr2))
+  → ExtendedGCDState m n hm hn
+ := fun s1 => fun t1 => fun r1 => fun s2 => fun t2 => fun r2 => fun hr1 => fun hr2 =>
+    fun hlin1 => fun hlin2 => fun hcd =>
+      let res := division_algorithm r1 r2 (Int.le_of_lt hr1) hr2;
+      let q := res.q
+      let r := res.r
+      have heq := res.eq
+      have hlt := res.lt
+      have hrnat := res.rnat
+      have hrfl : r = res.r
+        := by rfl
+      if h : r = 0 then
+         have hr2dvdr1 : r2 ∣ r1
+            := by rw [← hrfl, h, add_zero, mul_comm] at heq
+                  exists q
+         have hd : CD r1 r2 (Int.le_of_lt hr1) (Int.le_of_lt hr2) = D r2 (Int.le_of_lt hr2)
+            := common_divisor_rem_1 hr1 hr2 hr2dvdr1
+        ⟨s2, t2, r2, hr2, hlin2, hcd.trans hd⟩
+      else
+        have hr : 0 < r := lt_of_le_of_ne hrnat (fun hr0 => h hr0.symm)
+        have h_r2_not_div_r1 : ¬ (r2 ∣ r1)
+          := (rem_eq_zero_iff_dvd (Int.le_of_lt hr1) hr2).not.mp h
+        have hrlc : r = (s1-q*s2) * m + (t1-q*t2) * n
+          := by calc
+              r = r1 - q * r2 := by linarith [heq]
+              _ = (s1 * m + t1 * n) - q * (s2 * m + t2 * n) := by rw [hlin1, hlin2]
+              _ =  (s1 - (q * s2)) * m + (t1 - (q * t2)) * n := by linarith
+        have hcd' : CD m n (Int.le_of_lt hm) (Int.le_of_lt hn)
+                 = CD r2 r (Int.le_of_lt hr2) (Int.le_of_lt hr)
+          := hcd.trans (common_divisor_rem_2 hr1 hr2 h_r2_not_div_r1)
+        gcd_iter m n hm hn s2 t2 r2 (s1-q*s2) (t1-q*t2) r hr2 hr hlin2 hrlc hcd'
+     termination_by _ _ _ _ _ r2 => r2.toNat
+     decreasing_by
+      simp_wf
+      exact ⟨hlt, hr2⟩
+
+def extended_euclid_algorithm : (m n : ℤ) → (hm : m > 0) → (hn : n > 0)
+                              → ExtendedGCDState m n hm hn
+    := fun m => fun n => fun hm => fun hn =>
+    have h1 : m = 1 * m + 0 * n := by linarith
+    have h2 : n = 0 * m + 1 * n := by linarith
+    have hcd := common_divisor_refl (Int.le_of_lt hm) (Int.le_of_lt hn)
+    gcd_iter m n hm hn 1 0 m 0 1 n hm hn h1 h2 hcd
