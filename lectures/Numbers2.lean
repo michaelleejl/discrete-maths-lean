@@ -627,6 +627,13 @@ lemma dvd_gcd_comp {d m n : ℤ} (hd : d > 0) (hm : m > 0) (hn : n > 0) :
             := hup (Int.le_of_lt hd) ⟨ hdvdm, hdvdn ⟩
           exact h_exact
 
+lemma dvd_lincomb {d m n : ℤ} :
+  d ∣ m → d ∣ n → ∀ s t : ℤ, d ∣ (s * m + t * n)
+:= by intro ⟨ p, hp ⟩ ⟨ q, hq ⟩ s t
+      exists s * p + t * q
+      rw [hp, hq]
+      linarith
+
 -- Lemma 80
 lemma gcd_commutative (m n : ℤ) (hm : 0 < m) (hn : 0 < n) :
     gcd_comp m n hm hn = gcd_comp n m hn hm
@@ -769,3 +776,33 @@ lemma gcd_linear_combination (m n : ℤ) (hm : m > 0) (hn : n > 0) :
         exists res.s, res.t
         rw [← extended_euclid_algorithm_computes_gcd m n hm hn]
         exact res.hlin.symm
+
+theorem gcd_linearity (l m n : ℤ)
+  (hl : l > 0) (hm : m > 0) (hn : n > 0) :
+    gcd_comp (l * m) (l*n) (Int.mul_pos hl hm) (Int.mul_pos hl hn)
+  = l * gcd_comp m n hm hn
+:= by let d := gcd_comp (l * m) (l*n) (Int.mul_pos hl hm) (Int.mul_pos hl hn)
+      let d' := l * gcd_comp m n hm hn
+      have ⟨ div_m, div_n, _ ⟩ := euclid_algo_computes_gcd m n hm hn
+      have hd_pos := gcd_comp_is_pos (l * m) (l*n) (Int.mul_pos hl hm) (Int.mul_pos hl hn)
+      have hd'_pos := (Int.mul_pos hl (gcd_comp_is_pos m n hm hn))
+      have h_d_div_d' : d ∣ (l * gcd_comp m n hm hn)
+        := by have ⟨s, t, hlin⟩ := gcd_linear_combination m n hm hn
+              rw [← Int.mul_eq_mul_left_iff (Int.ne_of_gt hl)] at hlin
+              rw [← hlin]
+              have ⟨ div_lm, div_ln, _ ⟩ :=  euclid_algo_computes_gcd (l * m) (l*n)
+                                       (Int.mul_pos hl hm)
+                                       (Int.mul_pos hl hn)
+              have h : ∀ (p q : ℤ), d ∣ p * (l * m) + q * (l * n) := dvd_lincomb div_lm div_ln
+              specialize h s t
+              have h_rw : s * (l * m) + t * (l * n) = l * (s * m + t * n) := by linarith
+              rw [← h_rw]
+              exact h
+      have h_d'_div_d : d' ∣ d
+        := by have ⟨_ , _ , gcd_up ⟩
+               := euclid_algo_computes_gcd (l*m) (l*n) (Int.mul_pos hl hm) (Int.mul_pos hl hn)
+              specialize gcd_up d'
+              have div_lm : d' ∣ l * m := Int.mul_dvd_mul_left l div_m
+              have div_ln : d' ∣ l * n := Int.mul_dvd_mul_left l div_n
+              apply gcd_up (Int.le_of_lt hd'_pos) ⟨div_lm, div_ln⟩
+      exact Int.dvd_antisymm (Int.le_of_lt hd_pos) (Int.le_of_lt hd'_pos) h_d_div_d' h_d'_div_d
