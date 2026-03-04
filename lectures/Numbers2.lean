@@ -580,12 +580,28 @@ def euclid_algo : (m n : ℤ) → (hm : m > 0) → (hn : n > 0)
   := (euclid_algo m n hm hn).hd
 
 -- Theorem 78
+theorem is_gcd_iff_computed_by_euclid_algo (m n k : ℤ)
+  (hm : m > 0) (hn : n > 0) (hk : k > 0) :
+  is_gcd k m n hk hm hn ↔ k = gcd_comp m n hm hn
+  := by constructor
+        · intro hgcd
+          dsimp [is_gcd] at hgcd
+          rw [defs_of_gcd_equiv (Int.le_of_lt hm) (Int.le_of_lt hn) (Int.le_of_lt hk)] at hgcd
+          let comp := euclid_algo m n hm hn
+          exact uniqueness_of_gcd (Int.le_of_lt hm) (Int.le_of_lt hn) (Int.le_of_lt hk)
+                (Int.le_of_lt comp.hd) hgcd comp.hgcd
+        · intro heq
+          rw [heq] at hk
+          subst heq
+          dsimp [is_gcd]
+          let ⟨ d, hd, hgcd ⟩ := euclid_algo m n hm hn
+          rw [defs_of_gcd_equiv (Int.le_of_lt hm) (Int.le_of_lt hn) (Int.le_of_lt hd)]
+          exact hgcd
+
 theorem euclid_algo_computes_gcd (m n : ℤ) (hm : m > 0) (hn : n > 0) :
     is_gcd (gcd_comp m n hm hn) m n (gcd_comp_is_pos m n hm hn) hm hn
-  := by dsimp [is_gcd]
-        let ⟨ d, hd, hgcd ⟩ := euclid_algo m n hm hn
-        rw [defs_of_gcd_equiv (Int.le_of_lt hm) (Int.le_of_lt hn) (Int.le_of_lt hd)]
-        exact hgcd
+  := (is_gcd_iff_computed_by_euclid_algo m n (gcd_comp m n hm hn)
+                                        hm hn (gcd_comp_is_pos m n hm hn)).mpr rfl
 
 lemma dvd_gcd_comp {d m n : ℤ} (hd : d > 0) (hm : m > 0) (hn : n > 0) :
     d ∣ (gcd_comp m n hm hn) ↔ d ∣ m ∧ d ∣ n
@@ -737,3 +753,19 @@ def extended_euclid_algorithm : (m n : ℤ) → (hm : m > 0) → (hn : n > 0)
     have h2 : n = 0 * m + 1 * n := by linarith
     have hcd := common_divisor_refl (Int.le_of_lt hm) (Int.le_of_lt hn)
     gcd_iter m n hm hn 1 0 m 0 1 n hm hn h1 h2 hcd
+
+lemma extended_euclid_algorithm_computes_gcd
+  (m n : ℤ) (hm : m > 0) (hn : n > 0) :
+    (extended_euclid_algorithm m n hm hn).r = gcd_comp m n hm hn
+  := by let ⟨s, t, r, hr, hlin, hgcd⟩ := extended_euclid_algorithm m n hm hn
+        rw [← defs_of_gcd_equiv] at hgcd
+        rw [← is_gcd_iff_computed_by_euclid_algo m n r hm hn hr]
+        dsimp [is_gcd]
+        exact hgcd
+
+lemma gcd_linear_combination (m n : ℤ) (hm : m > 0) (hn : n > 0) :
+    ∃ s t : ℤ, s * m + t * n = gcd_comp m n hm hn
+  := by let res := extended_euclid_algorithm m n hm hn
+        exists res.s, res.t
+        rw [← extended_euclid_algorithm_computes_gcd m n hm hn]
+        exact res.hlin.symm
