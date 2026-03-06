@@ -10,27 +10,26 @@ import Mathlib.Tactic.Ring
 
 
 open Nat
+
+
 ----------------------------- Lecture 01 -----------------------------
+
 
 -- Definition 7
 def odd (j : ℤ) : Prop := ∃i, j = (2: ℤ) * i + (1: ℤ)
 
 example : odd (7 : ℤ) := by
-  dsimp [odd]
   exists 3
 
 -- Proposition 8
 theorem multiplying_odds_returns_odd {i j} :
     odd i ∧ odd j → odd (i * j)
-  := by intro h
-        match h with
-        | ⟨ hi, hj ⟩ =>
-            dsimp [odd]
-            obtain ⟨ a, ha ⟩ := hi
-            obtain ⟨ b, hb ⟩ := hj
-            use (2*a*b + a + b)
-            simp [ha, hb]
-            ring
+  := by intro ⟨ hi, hj ⟩
+        obtain ⟨ a, ha ⟩ := hi
+        obtain ⟨ b, hb ⟩ := hj
+        use (2*a*b + a + b)
+        simp [ha, hb]
+        ring
 
 -- Definition 9a
 def rational (x : ℝ) : Prop := ∃ (p q : ℤ), x = (p : ℝ) / (q : ℝ)
@@ -54,8 +53,7 @@ def natural (x : ℤ) : Prop := x >= (0 : ℤ)
 -- Proposition 10
 theorem square_root_of_rational_is_rational {x : ℝ} :
     positive x → rational √x → rational (x)
-  := by introv hpos hrat
-        dsimp [rational]
+  := by intro hpos hrat
         obtain ⟨ p, q, hpq ⟩ := hrat
         use p^2, q^2
         rw [← Real.sq_sqrt (le_of_lt hpos)]
@@ -65,22 +63,20 @@ theorem square_root_of_rational_is_rational {x : ℝ} :
 -- Theorem 11
 theorem transitive_implication {p q r : Prop} :
     (p → q) ∧ (q → r) → (p → r)
-  := by intro h
-        match h with
-        | ⟨ hpq, hqr ⟩ =>
-          intro p
-          have q := hpq p
-          have r := hqr q
-          exact r
+  := by intro ⟨ hpq, hqr ⟩ p
+        have q := hpq p
+        have r := hqr q
+        exact r
+
 
 ----------------------------- Lecture 02 -----------------------------
+
 
 -- Definition 12
 def divides (d n : ℤ) : Prop := ∃ k, n = d * k
 
 -- Example 13
 example : divides (2 : ℤ) (4 : ℤ) := by
-  dsimp [divides]
   exists 2
 
 -- Definition 14
@@ -133,7 +129,9 @@ theorem congruence_maintained_by_scaling {a b m : ℤ} :
           repeat rw [Int.one_mul] at h
           exact h
 
+
 ----------------------------- Lecture 03 -----------------------------
+
 
 -- Theorem 19
 theorem divisible_by_6 {n : ℤ} :
@@ -179,7 +177,9 @@ theorem transitivity_of_division {l m n : ℤ} :
               use i * j
               rw [hj, hi, mul_assoc]
 
+
 ----------------------------- Lecture 04 -----------------------------
+
 
 -- Proposition 24
 def P (m n z : ℤ) : Prop := 0 ≤ z ∧ z < m ∧ congruent_modulo z n m
@@ -452,7 +452,9 @@ theorem the_many_dropout_lemma {m p : ℕ} :
                          := ModEq.add_right 1 ih
                        exact h_d.trans h_i
 
+
 ----------------------------- Lecture 05 -----------------------------
+
 
 theorem double_negation_elim {p : Prop} :
     ¬ ¬ p ↔ p
