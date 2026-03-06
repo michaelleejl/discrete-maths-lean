@@ -25,6 +25,7 @@ example : odd (7 : ℤ) := by
 theorem multiplying_odds_returns_odd {i j} :
     odd i ∧ odd j → odd (i * j)
   := by intro ⟨ hi, hj ⟩
+        dsimp [odd]
         obtain ⟨ a, ha ⟩ := hi
         obtain ⟨ b, hb ⟩ := hj
         use (2*a*b + a + b)
@@ -54,6 +55,7 @@ def natural (x : ℤ) : Prop := x >= (0 : ℤ)
 theorem square_root_of_rational_is_rational {x : ℝ} :
     positive x → rational √x → rational (x)
   := by intro hpos hrat
+        dsimp [rational]
         obtain ⟨ p, q, hpq ⟩ := hrat
         use p^2, q^2
         rw [← Real.sq_sqrt (le_of_lt hpos)]
@@ -77,6 +79,7 @@ def divides (d n : ℤ) : Prop := ∃ k, n = d * k
 
 -- Example 13
 example : divides (2 : ℤ) (4 : ℤ) := by
+  dsimp [divides]
   exists 2
 
 -- Definition 14
