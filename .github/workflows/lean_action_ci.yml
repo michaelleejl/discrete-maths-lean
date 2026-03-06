@@ -22,4 +22,5 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: leanprover/lean-action@v1
-      - uses: leanprover-community/docgen-action@v1
+      # Only use the docgen action when we have documentation to generate, otherwise its just slow and useless
+      # - uses: leanprover-community/docgen-action@v1
