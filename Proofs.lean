@@ -150,13 +150,11 @@ theorem divisible_by_6 {n : ℤ} :
             linarith
           · exists 2 * k
             linarith
-        · intro hdivs
-          match hdivs with
-          | ⟨ hdiv2, hdiv3 ⟩ =>
-            obtain ⟨ i, hi ⟩ := hdiv2
-            obtain ⟨ j, hj ⟩ := hdiv3
-            exists (i - j)
-            linarith
+        · intro ⟨ hdiv2, hdiv3 ⟩
+          obtain ⟨ i, hi ⟩ := hdiv2
+          obtain ⟨ j, hj ⟩ := hdiv3
+          exists (i - j)
+          linarith
 
 -- Proposition 21
 theorem difference_of_squares {n : ℤ} :
@@ -174,13 +172,11 @@ theorem difference_of_squares {n : ℤ} :
 theorem transitivity_of_division {l m n : ℤ} :
     divides l m ∧ divides m n → divides l n
   := by dsimp [divides]
-        intro h
-        match h with
-          | ⟨ hlm, hmn ⟩ =>
-              obtain ⟨i, hi⟩ := hlm
-              obtain ⟨j, hj⟩ := hmn
-              use i * j
-              rw [hj, hi, mul_assoc]
+        intro ⟨ hlm, hmn ⟩
+        obtain ⟨i, hi⟩ := hlm
+        obtain ⟨j, hj⟩ := hmn
+        use i * j
+        rw [hj, hi, mul_assoc]
 
 
 ----------------------------- Lecture 04 -----------------------------
@@ -193,14 +189,12 @@ lemma transitivity_of_cong {a b c n : ℤ} :
     a ≡ b [ZMOD n] ∧ b ≡ c [ZMOD n] →
     a ≡ c [ZMOD n]
   := by dsimp [congruent_modulo, divides]
-        intro h
-        match h with
-        | ⟨ hab, hbc ⟩ =>
-           obtain ⟨ i, hi ⟩ := hab
-           obtain ⟨ j, hj ⟩ := hbc
-           exists (i + j)
-           rw [mul_add, ← hi, ← hj]
-           linarith
+        intro ⟨ hab, hbc ⟩
+        obtain ⟨ i, hi ⟩ := hab
+        obtain ⟨ j, hj ⟩ := hbc
+        exists (i + j)
+        rw [mul_add, ← hi, ← hj]
+        linarith
 
 lemma symmetry_of_cong {a b n : ℤ} :
     a ≡ b [ZMOD n] → b ≡ a [ZMOD n]
@@ -213,25 +207,22 @@ lemma symmetry_of_cong {a b n : ℤ} :
 theorem congruence_uniquely_characterises {m n : ℤ} :
     m > 0 →
     ∀ x y : ℤ, P m n x ∧ P m n y → x = y
-  := by intro h_m_pos x y hP
-        dsimp [P] at hP
-        match hP with
-        | ⟨ ⟨ xgteq0, xltm, hx ⟩, ⟨ ygteq0, yltm, hy ⟩ ⟩ =>
-          have hxy : x ≡ y [ZMOD m]
-            := transitivity_of_cong ⟨ hx , symmetry_of_cong hy ⟩
-          dsimp [congruent_modulo, divides] at hxy
-          obtain ⟨ i, hi ⟩ := hxy
-          have ⟨ hboundl, hboundr ⟩ : m * -1 < x - y ∧ x - y < m * 1
-            := by constructor <;> linarith
-          have ibound : - 1 < i ∧ i < 1
-            := by constructor
-                  · rw [hi, Int.mul_lt_mul_left h_m_pos] at hboundl
-                    exact hboundl
-                  · rw [hi, Int.mul_lt_mul_left h_m_pos] at hboundr
-                    exact hboundr
-          have ieq0 : i = 0 := by linarith
-          rw [← sub_eq_zero, hi, ieq0]
-          linarith
+  := by intro h_m_pos x y ⟨ ⟨ xgteq0, xltm, hx ⟩, ⟨ ygteq0, yltm, hy ⟩ ⟩
+        have hxy : x ≡ y [ZMOD m]
+          := transitivity_of_cong ⟨ hx , symmetry_of_cong hy ⟩
+        dsimp [congruent_modulo, divides] at hxy
+        obtain ⟨ i, hi ⟩ := hxy
+        have ⟨ hboundl, hboundr ⟩ : m * -1 < x - y ∧ x - y < m * 1
+          := by constructor <;> linarith
+        have ibound : - 1 < i ∧ i < 1
+          := by constructor
+                · rw [hi, Int.mul_lt_mul_left h_m_pos] at hboundl
+                  exact hboundl
+                · rw [hi, Int.mul_lt_mul_left h_m_pos] at hboundr
+                  exact hboundr
+        have ieq0 : i = 0 := by linarith
+        rw [← sub_eq_zero, hi, ieq0]
+        linarith
 
 -- Proposition 25
 theorem squares_mod_4 :
