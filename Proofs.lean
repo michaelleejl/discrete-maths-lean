@@ -82,17 +82,19 @@ example : divides (2 : ℤ) (4 : ℤ) := by
 -- Definition 14
 def congruent_modulo (a b m : ℤ) : Prop := divides m (a - b)
 
+-- Custom notation for congruent_modulo
+notation:50 a " ≡ " b " [ZMOD " m "]" => congruent_modulo a b m
+
 -- Example 15
-example : congruent_modulo (18 : ℤ) (2 : ℤ) (4 : ℤ) := by
-  dsimp [congruent_modulo, divides]
+example : (18 : ℤ) ≡ (2 : ℤ) [ZMOD (4 : ℤ)] := by
   exists 4
 
 -- Proposition 16
 def even (j : ℤ) : Prop := ∃ i, j = (2 : ℤ) * i
 
 theorem parity_modulo_two {n : ℤ} :
-    (even n ↔ congruent_modulo n 0 2) ∧
-    (odd  n ↔ congruent_modulo n 1 2)
+    (even n ↔ n ≡ 0 [ZMOD 2]) ∧
+    (odd  n ↔ n ≡ 1 [ZMOD 2])
   := by dsimp [even, odd, congruent_modulo, divides]
         constructor
         · constructor
@@ -116,7 +118,7 @@ theorem parity_modulo_two {n : ℤ} :
 
 -- Proposition 18
 theorem congruence_maintained_by_scaling {a b m : ℤ} :
-    congruent_modulo a b m ↔ ∀ n : ℤ, congruent_modulo (n*a) (n*b) m
+    a ≡ b [ZMOD m] ↔ ∀ n : ℤ, (n*a) ≡ (n*b) [ZMOD m]
   := by dsimp [congruent_modulo, divides]
         constructor
         · intro h n
@@ -182,11 +184,11 @@ theorem transitivity_of_division {l m n : ℤ} :
 
 
 -- Proposition 24
-def P (m n z : ℤ) : Prop := 0 ≤ z ∧ z < m ∧ congruent_modulo z n m
+def P (m n z : ℤ) : Prop := 0 ≤ z ∧ z < m ∧ z ≡ n [ZMOD m]
 
 lemma transitivity_of_cong {a b c n : ℤ} :
-    congruent_modulo a b n ∧ congruent_modulo b c n →
-    congruent_modulo a c n
+    a ≡ b [ZMOD n] ∧ b ≡ c [ZMOD n] →
+    a ≡ c [ZMOD n]
   := by dsimp [congruent_modulo, divides]
         intro h
         match h with
@@ -198,7 +200,7 @@ lemma transitivity_of_cong {a b c n : ℤ} :
            linarith
 
 lemma symmetry_of_cong {a b n : ℤ} :
-    congruent_modulo a b n → congruent_modulo b a n
+    a ≡ b [ZMOD n] → b ≡ a [ZMOD n]
   := by dsimp [congruent_modulo, divides]
         intro h
         obtain ⟨ k, hk ⟩ := h
@@ -212,7 +214,7 @@ theorem congruence_uniquely_characterises {m n : ℤ} :
         dsimp [P] at hP
         match hP with
         | ⟨ ⟨ xgteq0, xltm, hx ⟩, ⟨ ygteq0, yltm, hy ⟩ ⟩ =>
-          have hxy : congruent_modulo x y m
+          have hxy : x ≡ y [ZMOD m]
             := transitivity_of_cong ⟨ hx , symmetry_of_cong hy ⟩
           dsimp [congruent_modulo, divides] at hxy
           obtain ⟨ i, hi ⟩ := hxy
@@ -231,7 +233,7 @@ theorem congruence_uniquely_characterises {m n : ℤ} :
 -- Proposition 25
 theorem squares_mod_4 :
   ∀ (n : ℤ),
-  congruent_modulo (n^2) 0 4 ∨ congruent_modulo (n^2) 1 4
+  (n^2) ≡ 0 [ZMOD 4] ∨ (n^2) ≡ 1 [ZMOD 4]
   := by intro n
         dsimp [congruent_modulo, divides]
         cases (Int.even_or_odd n) with
