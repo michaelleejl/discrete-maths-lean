@@ -12,72 +12,76 @@ def Alphabet {t} (symbols : Finset t) : Type :=
 example : Type := Alphabet {'a', 'b', 'c'}
 
 -- Definition 1.2, "String over an alphabet"
-def String {t} (symbols : Finset t) n := List.Vector (Alphabet symbols) n
+def Strings {t} (symbols : Finset t) := List (Alphabet symbols)
 
-instance {n m : Nat} : HAppend (String α n) (String α m) (String α (n + m)) where
-  hAppend
-  | ⟨l₁, h₁⟩, ⟨l₂, h₂⟩ =>
-    ⟨l₁ ++ l₂, by simp [h₁, h₂]⟩
+example : Strings {'a', 'b', 'c'} :=
+  [⟨'a', by simp⟩, ⟨'b', by simp⟩, ⟨'c', by simp⟩]
+
+def String {t} (symbols : Finset t) n :=
+  { s : Strings symbols // s.length = n }
 
 example : String {'a', 'b', 'c'} 3 :=
   ⟨[⟨'a', by simp⟩, ⟨'b', by simp⟩, ⟨'c', by simp⟩], rfl⟩
 
-def Strings {t} (symbols : Finset t) := Σ n, String symbols n
+-- Definition 1.3, "Concatenation of strings"
+@[simp]
+def strings_concat {t} {symbols : Finset t}
+  (s₁ : Strings symbols) (s₂ : Strings symbols)
+  : Strings symbols :=
+  List.append s₁ s₂
 
 instance : Append (Strings α) where
-  append
-  | ⟨n₁, s₁⟩, ⟨n₂, s₂⟩ =>
-    ⟨n₁ + n₂, s₁ ++ s₂⟩
+  append := strings_concat
 
-example : Strings {'a', 'b', 'c'} :=
-  ⟨
-    3,
-    ⟨[⟨'a', by simp⟩, ⟨'b', by simp⟩, ⟨'c', by simp⟩], rfl⟩
-  ⟩
+@[simp]
+theorem strings_append_eq {t} {symbols : Finset t} (s₁ s₂ : Strings symbols) :
+  s₁ ++ s₂ = List.append s₁ s₂ := rfl
 
--- Definition 1.3, "Concatenation of strings"
-def string_concat_with_length {t} {symbols : Finset t} {n_s₁ n_s₂}
+@[simp]
+def string_concat {t} {symbols : Finset t} {n_s₁ n_s₂}
     (s₁ : String symbols n_s₁) (s₂ : String symbols n_s₂)
     : String symbols (n_s₁ + n_s₂) :=
-  s₁ ++ s₂
+  let (⟨l₁, h₁⟩, ⟨l₂, h₂⟩) := (s₁, s₂)
+  ⟨
+    l₁ ++ l₂,
+    by
+      rw [← h₁, ← h₂]
+      apply List.length_append
+  ⟩
 
-def string_concat {t} {symbols : Finset t} (s₁ : Strings symbols) (s₂ : Strings symbols)
-  : Strings symbols :=
-    let ⟨n_s₁, s₁⟩ := s₁
-    let ⟨n_s₂, s₂⟩ := s₂
-    ⟨n_s₁ + n_s₂, string_concat_with_length s₁ s₂⟩
+instance : HAppend (String α n) (String α m) (String α (n + m)) where
+  hAppend := string_concat
 
-infixl:65 " @ " => string_concat
+@[simp]
+theorem string_append_eq {t} {symbols : Finset t} {n_s₁ n_s₂}
+    (s₁ : String symbols n_s₁) (s₂ : String symbols n_s₂) :
+  s₁ ++ s₂ = string_concat s₁ s₂ := rfl
 
-example : Strings {'a', 'b', 'c'} :=
-  ⟨2, ⟨[⟨'a', by simp⟩, ⟨'b', by simp⟩], rfl⟩⟩ @
-  ⟨2, ⟨[⟨'c', by simp⟩, ⟨'c', by simp⟩], rfl⟩⟩
+-- Lemma 1.4, "Properties of concatenation"
 
-def string_empty {t} {symbols : Finset t} : Strings symbols :=
-  ⟨0, List.Vector.nil⟩
+@[simp]
+def strings_empty {t} {symbols : Finset t} : Strings symbols :=
+  []
 
-notation "ε" => string_empty
+@[simp]
+def string_empty {t} {symbols : Finset t} : String symbols 0 :=
+  ⟨strings_empty, rfl⟩
 
--- Definition 1.4, "Properties of concatenation"
+notation "ε" => strings_empty
+notation "ε'" => string_empty
 
--- Lemma 1.4ai
-lemma eps_concat_neutral {symbols : Finset t} (s : Strings symbols)
-  : string_empty @ s = s := by
-    dsimp [string_empty, string_concat]
-    sorry
+lemma eps_concat {t} {symbols : Finset t}
+  : ∀ (s : Strings symbols), ε ++ s = s := by simp
 
--- Lemma 1.4aii
-lemma concat_eps_neutral {symbols : Finset t} (s : Strings symbols)
-  : s @ ε = s := by
-    dsimp [string_empty, string_concat, string_concat_with_length]
-    sorry
+lemma concat_eps {t} {symbols : Finset t}
+  : ∀ (s : Strings symbols), s ++ ε = s := by simp
 
--- Lemma 1.4b
-lemma concat_assoc {symbols : Finset t} (s₁ s₂ s₃ : Strings symbols)
-  : (s₁ @ s₂) @ s₃ = s₁ @ (s₂ @ s₃) := by
-    sorry
+lemma concat_assoc {t} {symbols : Finset t}
+  : ∀ (s₁ s₂ s₃ : Strings symbols),
+  (s₁ ++ s₂) ++ s₃
+  = s₁ ++ (s₂ ++ s₃) := by simp
 
--- TODO
+-- TODO - continue from here
 
 
 end FormalLanguagesAndAutomata.FormalLanguages
