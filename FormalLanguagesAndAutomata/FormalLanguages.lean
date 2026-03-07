@@ -1,5 +1,6 @@
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Vector.Defs
+import Mathlib.Algebra.Group.Defs
 
 namespace FormalLanguagesAndAutomata.FormalLanguages
 
@@ -81,7 +82,17 @@ lemma concat_assoc {t} {symbols : Finset t}
   (s₁ ++ s₂) ++ s₃
   = s₁ ++ (s₂ ++ s₃) := by simp
 
--- TODO - continue from here
+-- Observation 1.5, "Monoid structure of strings"
+instance {symbols : Finset t} : Monoid (Strings symbols) where
+  one := ε
+  mul := strings_concat
+  one_mul := eps_concat
+  mul_one := concat_eps
+  mul_assoc := concat_assoc
+
+-- Definition 1.6, "Formal language"
+def FormalLanguage {t} (symbols : Finset t) :=
+  Set (Strings symbols)
 
 
 end FormalLanguagesAndAutomata.FormalLanguages
