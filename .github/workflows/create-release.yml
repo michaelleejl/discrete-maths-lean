@@ -2,9 +2,10 @@ name: Create Release
 
 on:
   push:
-    branches:
-      - 'main'
-      - 'master'
+    # Disabled until we want it
+    # branches:
+    #   - 'main'
+    #   - 'master'
     paths:
       - 'lean-toolchain'
 
