@@ -6,7 +6,7 @@ import Mathlib.Algebra.Group.Defs
 -- TODO - instead of having this overarching namespace, have namespaces
 --        for each type of thing, which should contain the functions and theorems for it
 
-namespace FormalLanguagesAndAutomata.FormalLanguages
+namespace FormalLanguagesAndAutomata
 
 
 -- Section 1, "Formal languages"
@@ -31,51 +31,28 @@ example : String {'a', 'b', 'c'} 3 :=
   ⟨[⟨'a', by simp⟩, ⟨'b', by simp⟩, ⟨'c', by simp⟩], rfl⟩
 
 -- Definition 1.3, "Concatenation of strings"
+namespace Strings
+
 @[simp]
-def strings_concat {t} {symbols : Finset t}
+def concat {t} {symbols : Finset t}
   (s₁ : Strings symbols) (s₂ : Strings symbols)
   : Strings symbols :=
   List.append s₁ s₂
 
 instance : Append (Strings α) where
-  append := strings_concat
+  append := concat
 
 @[simp]
-theorem strings_concat_eq {t} {symbols : Finset t} (s₁ s₂ : Strings symbols) :
+theorem concat_eq {t} {symbols : Finset t} (s₁ s₂ : Strings symbols) :
   s₁ ++ s₂ = List.append s₁ s₂ := rfl
-
-@[simp]
-def string_concat {t} {symbols : Finset t} {n_s₁ n_s₂}
-    (s₁ : String symbols n_s₁) (s₂ : String symbols n_s₂)
-    : String symbols (n_s₁ + n_s₂) :=
-  let (⟨l₁, h₁⟩, ⟨l₂, h₂⟩) := (s₁, s₂)
-  ⟨
-    l₁ ++ l₂,
-    by
-      rw [← h₁, ← h₂]
-      apply List.length_append
-  ⟩
-
-instance : HAppend (String α n) (String α m) (String α (n + m)) where
-  hAppend := string_concat
-
-@[simp]
-theorem string_concat_eq {t} {symbols : Finset t} {n_s₁ n_s₂}
-    (s₁ : String symbols n_s₁) (s₂ : String symbols n_s₂) :
-  s₁ ++ s₂ = string_concat s₁ s₂ := rfl
 
 -- Lemma 1.4, "Properties of concatenation"
 
 @[simp]
-def strings_empty {t} {symbols : Finset t} : Strings symbols :=
+def empty {t} {symbols : Finset t} : Strings symbols :=
   []
 
-@[simp]
-def string_empty {t} {symbols : Finset t} : String symbols 0 :=
-  ⟨strings_empty, rfl⟩
-
-notation "ε" => strings_empty
-notation "ε'" => string_empty
+notation "ε" => empty
 
 lemma eps_concat {t} {symbols : Finset t}
   : ∀ (s : Strings symbols), ε ++ s = s := by simp
@@ -91,10 +68,12 @@ lemma concat_assoc {t} {symbols : Finset t}
 -- Observation 1.5, "Monoid structure of strings"
 instance {symbols : Finset t} : Monoid (Strings symbols) where
   one := ε
-  mul := strings_concat
+  mul := concat
   one_mul := eps_concat
   mul_one := concat_eps
   mul_assoc := concat_assoc
+
+end Strings
 
 -- Definition 1.6, "Formal language"
 def FormalLanguage {t} (symbols : Finset t) :=
@@ -116,7 +95,7 @@ structure SyntacticRule (t : Type) where
   premises : List t
   conclusion : t
 
-namespace FormalLanguagesAndAutomata.SyntacticRule
+namespace SyntacticRule
 
 def is_axiom (R : SyntacticRule t) : Prop :=
   List.isEmpty R.premises
@@ -137,7 +116,7 @@ end Examples.E2_1_4_2
 
 -- TODO - continue syntactic rule stuff
 
-end FormalLanguagesAndAutomata.SyntacticRule
+end SyntacticRule
 
 -- TODO - should we do anything about how they describe notation
 --        and stuff about rule induction, since we can just use
@@ -151,22 +130,21 @@ inductive ExampleLanguage : FormalLanguage {'a', 'b', 'c'} where
     ∀ u,
     ExampleLanguage u
     → ExampleLanguage
-      (strings_concat [⟨'a', by simp⟩]
-        (strings_concat u
+      (Strings.concat [⟨'a', by simp⟩]
+        (Strings.concat u
           [⟨'b', by simp⟩]))
   | bua :
     ∀ u,
     ExampleLanguage u
     → ExampleLanguage
-      (strings_concat [⟨'b', by simp⟩]
-        (strings_concat u
+      (Strings.concat [⟨'b', by simp⟩]
+        (Strings.concat u
           [⟨'a', by simp⟩]))
   | uv :
     ∀ u v,
     ExampleLanguage u → ExampleLanguage v
-    → ExampleLanguage (strings_concat u v)
+    → ExampleLanguage (Strings.concat u v)
 end Examples.E2_1_8
-
 
 -- Example 2.1.9, "Revisiting reflexive-transitive closure"
 namespace Examples.E2_1_9
@@ -178,5 +156,4 @@ inductive ReflexiveTransitiveClosure (R : Set (α × α)) : Set (α × α) where
     → (ReflexiveTransitiveClosure R) ⟨x, z⟩
 end Examples.E2_1_9
 
-
-end FormalLanguagesAndAutomata.FormalLanguages
+end FormalLanguagesAndAutomata
