@@ -94,5 +94,51 @@ instance {symbols : Finset t} : Monoid (Strings symbols) where
 def FormalLanguage {t} (symbols : Finset t) :=
   Set (Strings symbols)
 
+-- Example 2.1.1, "Informal rules for constructing naturals"
+namespace Examples.E2_1_1
+inductive ExampleNat : Type
+  | zero : ExampleNat
+  | succ (n : ExampleNat) : ExampleNat
+end Examples.E2_1_1
+
+-- TODO - should we do anything about how they describe notation
+--        and stuff about rule induction, since we can just use
+--        `inductive` for the formalization later on
+
+-- Example 2.1.8, "A syntactic presentation of a formal language"
+namespace Examples.E2_1_8
+inductive ExampleLanguage : FormalLanguage {'a', 'b', 'c'} where
+  | empty : ExampleLanguage ε
+  | aub :
+    ∀ u,
+    ExampleLanguage u
+    → ExampleLanguage
+      (strings_concat [⟨'a', by simp⟩]
+        (strings_concat u
+          [⟨'b', by simp⟩]))
+  | bua :
+    ∀ u,
+    ExampleLanguage u
+    → ExampleLanguage
+      (strings_concat [⟨'b', by simp⟩]
+        (strings_concat u
+          [⟨'a', by simp⟩]))
+  | uv :
+    ∀ u v,
+    ExampleLanguage u → ExampleLanguage v
+    → ExampleLanguage (strings_concat u v)
+end Examples.E2_1_8
+
+
+-- Example 2.1.9, "Revisiting reflexive-transitive closure"
+namespace Examples.E2_1_9
+inductive ReflexiveTransitiveClosure (R : α → α → Prop) : α → α → Prop where
+  | fromR : ∀ x y, R x y → (ReflexiveTransitiveClosure R) x y
+  | reflexive : ∀ x, (ReflexiveTransitiveClosure R) x x
+  | transitive :
+    ∀ x y z, R x y → R y z
+    → (ReflexiveTransitiveClosure R) x z
+end Examples.E2_1_9
+
 
 end FormalLanguagesAndAutomata.FormalLanguages
