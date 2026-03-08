@@ -35,7 +35,7 @@ instance : Append (Strings α) where
   append := strings_concat
 
 @[simp]
-theorem strings_append_eq {t} {symbols : Finset t} (s₁ s₂ : Strings symbols) :
+theorem strings_concat_eq {t} {symbols : Finset t} (s₁ s₂ : Strings symbols) :
   s₁ ++ s₂ = List.append s₁ s₂ := rfl
 
 @[simp]
@@ -54,7 +54,7 @@ instance : HAppend (String α n) (String α m) (String α (n + m)) where
   hAppend := string_concat
 
 @[simp]
-theorem string_append_eq {t} {symbols : Finset t} {n_s₁ n_s₂}
+theorem string_concat_eq {t} {symbols : Finset t} {n_s₁ n_s₂}
     (s₁ : String symbols n_s₁) (s₂ : String symbols n_s₂) :
   s₁ ++ s₂ = string_concat s₁ s₂ := rfl
 
