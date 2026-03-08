@@ -1,9 +1,15 @@
+import Mathlib.Data.Real.Basic
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Vector.Defs
 import Mathlib.Algebra.Group.Defs
 
+-- TODO - instead of having this overarching namespace, have namespaces
+--        for each type of thing, which should contain the functions and theorems for it
+
 namespace FormalLanguagesAndAutomata.FormalLanguages
 
+
+-- Section 1, "Formal languages"
 
 -- Definition 1.1, "Alphabet"
 def Alphabet {t} (symbols : Finset t) : Type :=
@@ -94,12 +100,44 @@ instance {symbols : Finset t} : Monoid (Strings symbols) where
 def FormalLanguage {t} (symbols : Finset t) :=
   Set (Strings symbols)
 
+-- Section 2, "Inductive definitions"
+
 -- Example 2.1.1, "Informal rules for constructing naturals"
 namespace Examples.E2_1_1
 inductive ExampleNat : Type
   | zero : ExampleNat
   | succ (n : ExampleNat) : ExampleNat
 end Examples.E2_1_1
+
+-- Definition 2.1.4.1, "Syntactic rule"
+-- Note, for theorems about syntactic rules, we will use this definition,
+--   otherwise we will just use Lean's `inductive` for the formalizations
+structure SyntacticRule (t : Type) where
+  premises : List t
+  conclusion : t
+
+namespace FormalLanguagesAndAutomata.SyntacticRule
+
+def is_axiom (R : SyntacticRule t) : Prop :=
+  List.isEmpty R.premises
+
+-- Example 2.1.4.2, "Syntactic rules for forming natural numbers"
+namespace Examples.E2_1_4_2
+
+def zero : SyntacticRule ℝ :=
+  { premises := [], conclusion := 0 }
+
+def succ (x : ℝ) : SyntacticRule ℝ :=
+  { premises := [x], conclusion := x + 1 }
+
+end Examples.E2_1_4_2
+
+-- Definition 2.1.4.3, "The closure condition denoted by a syntactic rule"
+-- TODO
+
+-- TODO - continue syntactic rule stuff
+
+end FormalLanguagesAndAutomata.SyntacticRule
 
 -- TODO - should we do anything about how they describe notation
 --        and stuff about rule induction, since we can just use
@@ -132,12 +170,12 @@ end Examples.E2_1_8
 
 -- Example 2.1.9, "Revisiting reflexive-transitive closure"
 namespace Examples.E2_1_9
-inductive ReflexiveTransitiveClosure (R : α → α → Prop) : α → α → Prop where
-  | fromR : ∀ x y, R x y → (ReflexiveTransitiveClosure R) x y
-  | reflexive : ∀ x, (ReflexiveTransitiveClosure R) x x
+inductive ReflexiveTransitiveClosure (R : Set (α × α)) : Set (α × α) where
+  | fromR : ∀ x y, R ⟨x, y⟩ → (ReflexiveTransitiveClosure R) ⟨x, y⟩
+  | reflexive : ∀ x, (ReflexiveTransitiveClosure R) ⟨x, x⟩
   | transitive :
-    ∀ x y z, R x y → R y z
-    → (ReflexiveTransitiveClosure R) x z
+    ∀ x y z, R ⟨x, y⟩ → R ⟨y, z⟩
+    → (ReflexiveTransitiveClosure R) ⟨x, z⟩
 end Examples.E2_1_9
 
 
