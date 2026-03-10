@@ -91,7 +91,7 @@ end Examples.E2_1_1
 -- Definition 2.1.4.1, "Syntactic rule"
 -- Note, for theorems about syntactic rules, we will use this definition,
 --   otherwise we will just use Lean's `inductive` for the formalizations
-structure SyntacticRule (t : Type) where
+structure SyntacticRule (X : Set t) where
   premises : List t
   conclusion : t
 
@@ -103,24 +103,83 @@ def is_axiom (R : SyntacticRule t) : Prop :=
 -- Example 2.1.4.2, "Syntactic rules for forming natural numbers"
 namespace Examples.E2_1_4_2
 
-def zero : SyntacticRule ℝ :=
+def ℝ' : Set ℝ := Set.univ
+
+@[simp]
+def zero : SyntacticRule ℝ' :=
   { premises := [], conclusion := 0 }
 
-def succ (x : ℝ) : SyntacticRule ℝ :=
+@[simp]
+def succ (x : ℝ) : SyntacticRule ℝ' :=
   { premises := [x], conclusion := x + 1 }
+
+@[simp]
+def nat_rules : Set (SyntacticRule ℝ') :=
+  Set.union
+    { zero }
+    { succ n | n : ℕ }
 
 end Examples.E2_1_4_2
 
 -- Definition 2.1.4.3, "The closure condition denoted by a syntactic rule"
--- TODO
+def closure_condition {X : Set t} (r : SyntacticRule X) : Set (Set t) :=
+  { S ⊆ X | (∀ u ∈ r.premises, u ∈ S) → (r.conclusion ∈ S) }
+
+def closure_conditions_inter {X : Set t} (R : Set (SyntacticRule X))
+  : Set (Set t) :=
+  { S ⊆ X | ∀ r ∈ R, S ∈ closure_condition r }
+
+def Cl {X : Set t} (R : Set (SyntacticRule X)) :=
+  closure_conditions_inter R
+
+-- Definition 2.1.5
+inductive Derivation {t : Type} {X : Set t} (R : Set (SyntacticRule X))
+  : t → Prop where
+  | ax
+    : r ∈ R
+    → is_axiom r
+    → Derivation R r.conclusion
+  | with_premises
+    : r ∈ R
+    → (∀ u, u ∈ r.premises → Derivation R u)
+    → Derivation R r.conclusion
+
+example
+  : Derivation
+    Examples.E2_1_4_2.nat_rules
+    1
+  := by
+  suffices h_premise : Derivation Examples.E2_1_4_2.nat_rules 0 by
+    -- Assuming a derivation of 0, we form a derivation of 1
+    let r := Examples.E2_1_4_2.succ 0
+    let h_rmem : r ∈ Examples.E2_1_4_2.nat_rules := by
+      dsimp
+      right
+      use 0
+      simp [r]
+    let h_premises : ∀ u, u ∈ r.premises → Derivation Examples.E2_1_4_2.nat_rules u := by
+       intro u u_mem
+       apply List.mem_singleton.mp at u_mem
+       rw [u_mem]
+       exact h_premise
+    let r_conc_1 : 1 = r.conclusion := by
+      simp [r]
+    rw [r_conc_1]
+    apply (Derivation.with_premises h_rmem h_premises)
+  let r := Examples.E2_1_4_2.zero
+  let h_rmem : r ∈ Examples.E2_1_4_2.nat_rules := by
+    dsimp
+    left
+    rfl
+  let h_premises : ∀ u, u ∈ r.premises → Derivation Examples.E2_1_4_2.nat_rules u := by
+    intro u u_mem
+    exfalso
+    apply (List.not_mem_nil u_mem)
+  apply (Derivation.with_premises h_rmem h_premises)
 
 -- TODO - continue syntactic rule stuff
 
 end SyntacticRule
-
--- TODO - should we do anything about how they describe notation
---        and stuff about rule induction, since we can just use
---        `inductive` for the formalization later on
 
 -- Example 2.1.8, "A syntactic presentation of a formal language"
 namespace Examples.E2_1_8
