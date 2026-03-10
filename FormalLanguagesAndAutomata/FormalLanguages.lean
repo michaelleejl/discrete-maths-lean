@@ -95,15 +95,16 @@ structure SyntacticRule (X : Set t) where
   premises : List t
   conclusion : t
 
-namespace SyntacticRule
+def set_of_type (X : Type) : Set X := Set.univ
 
+namespace SyntacticRule
 def is_axiom (R : SyntacticRule t) : Prop :=
   List.isEmpty R.premises
 
 -- Example 2.1.4.2, "Syntactic rules for forming natural numbers"
 namespace Examples.E2_1_4_2
 
-def ℝ' : Set ℝ := Set.univ
+def ℝ' := set_of_type ℝ
 
 @[simp]
 def zero : SyntacticRule ℝ' :=
@@ -177,32 +178,36 @@ example
     apply (List.not_mem_nil u_mem)
   apply (Derivation.with_premises h_rmem h_premises)
 
--- TODO - continue syntactic rule stuff
-
 end SyntacticRule
+
+-- Definition 2.1.7, "Syntactic presentation of a formal language"
+def FormalLanguageSyntacticPresentation
+  (symbols : Finset t) :=
+  Set (SyntacticRule (set_of_type (Strings symbols)))
 
 -- Example 2.1.8, "A syntactic presentation of a formal language"
 namespace Examples.E2_1_8
-inductive ExampleLanguage : FormalLanguage {'a', 'b', 'c'} where
-  | empty : ExampleLanguage ε
-  | aub :
-    ∀ u,
-    ExampleLanguage u
-    → ExampleLanguage
-      (Strings.concat [⟨'a', by simp⟩]
-        (Strings.concat u
-          [⟨'b', by simp⟩]))
-  | bua :
-    ∀ u,
-    ExampleLanguage u
-    → ExampleLanguage
-      (Strings.concat [⟨'b', by simp⟩]
-        (Strings.concat u
-          [⟨'a', by simp⟩]))
-  | uv :
-    ∀ u v,
-    ExampleLanguage u → ExampleLanguage v
-    → ExampleLanguage (Strings.concat u v)
+def ExampleLanguage : FormalLanguageSyntacticPresentation {'a', 'b', 'c'} :=
+  Set.sUnion {
+    (Set.singleton {premises := [], conclusion := []}),
+    { {
+        premises := [u],
+        conclusion := (Strings.concat
+          [⟨'a', by simp⟩]
+          (Strings.concat u [⟨'b', by simp⟩]))}
+      | u : Strings {'a', 'b', 'c'} },
+    { {
+        premises := [u],
+        conclusion := (Strings.concat
+          [⟨'b', by simp⟩]
+          (Strings.concat u [⟨'a', by simp⟩]))}
+      | u : Strings {'a', 'b', 'c'} },
+    { {
+        premises := [u, v],
+        conclusion := Strings.concat u v}
+      | (u : Strings {'a', 'b', 'c'})
+        (v : Strings {'a', 'b', 'c'}) }
+  }
 end Examples.E2_1_8
 
 -- Example 2.1.9, "Revisiting reflexive-transitive closure"
