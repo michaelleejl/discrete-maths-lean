@@ -3,11 +3,7 @@ import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Vector.Defs
 import Mathlib.Algebra.Group.Defs
 
--- TODO - instead of having this overarching namespace, have namespaces
---        for each type of thing, which should contain the functions and theorems for it
-
 namespace FormalLanguagesAndAutomata
-
 
 -- Section 1, "Formal languages"
 
@@ -92,27 +88,47 @@ end Examples.E2_1_1
 -- Note, for theorems about syntactic rules, we will use this definition,
 --   otherwise we will just use Lean's `inductive` for the formalizations
 structure SyntacticRule (X : Set t) where
-  premises : List t
-  conclusion : t
+  premises : List X
+  conclusion : X
 
+@[simp]
 def set_of_type (X : Type) : Set X := Set.univ
 
 namespace SyntacticRule
+
+@[simp]
+def premise_values {X : Set t} (r : SyntacticRule X) : List t :=
+  List.map (fun x => x.val) r.premises
+
+@[simp]
+theorem premise_values_eq_nil_only_if {X : Set t} (r : SyntacticRule X) :
+  r.premise_values = [] → r.premises = [] := by
+  intro h
+  dsimp [premise_values] at h
+  apply List.map_eq_nil_iff.mp at h
+  exact h
+
+@[simp]
+def conclusion_value {X : Set t} (r : SyntacticRule X) : t :=
+  r.conclusion.1
+
+@[simp]
 def is_axiom (R : SyntacticRule t) : Prop :=
   List.isEmpty R.premises
 
 -- Example 2.1.4.2, "Syntactic rules for forming natural numbers"
 namespace Examples.E2_1_4_2
 
+@[simp]
 def ℝ' := set_of_type ℝ
 
 @[simp]
 def zero : SyntacticRule ℝ' :=
-  { premises := [], conclusion := 0 }
+  { premises := [], conclusion := ⟨0, by simp⟩ }
 
 @[simp]
 def succ (x : ℝ) : SyntacticRule ℝ' :=
-  { premises := [x], conclusion := x + 1 }
+  { premises := [⟨x, by simp⟩], conclusion := ⟨x + 1, by simp⟩ }
 
 @[simp]
 def nat_rules : Set (SyntacticRule ℝ') :=
@@ -124,26 +140,47 @@ end Examples.E2_1_4_2
 
 -- Definition 2.1.4.3, "The closure condition denoted by a syntactic rule"
 def closure_condition {X : Set t} (r : SyntacticRule X) : Set (Set t) :=
-  { S ⊆ X | (∀ u ∈ r.premises, u ∈ S) → (r.conclusion ∈ S) }
+  {
+    S ⊆ X
+    | (∀ u ∈ r.premise_values, u ∈ S) → (r.conclusion_value ∈ S)
+  }
 
 def closure_conditions_inter {X : Set t} (R : Set (SyntacticRule X))
   : Set (Set t) :=
-  { S ⊆ X | ∀ r ∈ R, S ∈ closure_condition r }
+  Set.sInter { closure_condition r | r ∈ R }
 
 def Cl {X : Set t} (R : Set (SyntacticRule X)) :=
   closure_conditions_inter R
 
 -- Definition 2.1.5
-inductive Derivation {t : Type} {X : Set t} (R : Set (SyntacticRule X))
-  : t → Prop where
+inductive Derivation {X : Set t} (R : Set (SyntacticRule X))
+  : t → Type where
   | ax
     : r ∈ R
     → is_axiom r
-    → Derivation R r.conclusion
+    → Derivation R r.conclusion_value
   | with_premises
     : r ∈ R
-    → (∀ u, u ∈ r.premises → Derivation R u)
-    → Derivation R r.conclusion
+    → (∀ u, u ∈ r.premise_values → Derivation R u)
+    → Derivation R r.conclusion_value
+
+namespace Derivation
+
+@[simp]
+def derives {X : Set t} (R : Set (SyntacticRule X)) (x : t) : Prop :=
+  Nonempty (Derivation R x)
+
+-- Note that this is defined with axioms having a height of 0, for convenience
+@[simp]
+def height {X : Set t} {R : Set (SyntacticRule X)} : Derivation R x → ℕ
+  | ax _ _ => 0
+  | @with_premises _ _ _ r _ h_premises =>
+    Option.getD
+      (List.max?
+        (List.map
+          (fun ⟨u, h_umem⟩ => height (h_premises u h_umem))
+          (List.attach r.premise_values)))
+      0
 
 example
   : Derivation
@@ -158,12 +195,12 @@ example
       right
       use 0
       simp [r]
-    let h_premises : ∀ u, u ∈ r.premises → Derivation Examples.E2_1_4_2.nat_rules u := by
+    let h_premises : ∀ u, u ∈ r.premise_values → Derivation Examples.E2_1_4_2.nat_rules u := by
        intro u u_mem
        apply List.mem_singleton.mp at u_mem
        rw [u_mem]
        exact h_premise
-    let r_conc_1 : 1 = r.conclusion := by
+    let r_conc_1 : 1 = r.conclusion_value := by
       simp [r]
     rw [r_conc_1]
     apply (Derivation.with_premises h_rmem h_premises)
@@ -172,11 +209,10 @@ example
     dsimp
     left
     rfl
-  let h_premises : ∀ u, u ∈ r.premises → Derivation Examples.E2_1_4_2.nat_rules u := by
-    intro u u_mem
-    exfalso
-    apply (List.not_mem_nil u_mem)
-  apply (Derivation.with_premises h_rmem h_premises)
+  let h_premises_empty : is_axiom r := by simp [r]
+  apply (Derivation.ax h_rmem h_premises_empty)
+
+end Derivation
 
 end SyntacticRule
 
@@ -189,22 +225,22 @@ def FormalLanguageSyntacticPresentation
 namespace Examples.E2_1_8
 def ExampleLanguage : FormalLanguageSyntacticPresentation {'a', 'b', 'c'} :=
   Set.sUnion {
-    (Set.singleton {premises := [], conclusion := []}),
+    (Set.singleton {premises := [], conclusion := ⟨ε, by simp⟩}),
     { {
-        premises := [u],
-        conclusion := (Strings.concat
+        premises := [⟨u, by simp⟩],
+        conclusion := ⟨Strings.concat
           [⟨'a', by simp⟩]
-          (Strings.concat u [⟨'b', by simp⟩]))}
+          (Strings.concat u [⟨'b', by simp⟩]), by simp⟩}
       | u : Strings {'a', 'b', 'c'} },
     { {
-        premises := [u],
-        conclusion := (Strings.concat
+        premises := [⟨u, by simp⟩],
+        conclusion := ⟨Strings.concat
           [⟨'b', by simp⟩]
-          (Strings.concat u [⟨'a', by simp⟩]))}
+          (Strings.concat u [⟨'a', by simp⟩]), by simp⟩}
       | u : Strings {'a', 'b', 'c'} },
     { {
-        premises := [u, v],
-        conclusion := Strings.concat u v}
+        premises := [⟨u, by simp⟩, ⟨v, by simp⟩],
+        conclusion := ⟨Strings.concat u v, by simp⟩}
       | (u : Strings {'a', 'b', 'c'})
         (v : Strings {'a', 'b', 'c'}) }
   }
