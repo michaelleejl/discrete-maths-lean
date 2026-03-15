@@ -256,4 +256,69 @@ inductive ReflexiveTransitiveClosure (R : Set (α × α)) : Set (α × α) where
     → (ReflexiveTransitiveClosure R) ⟨x, z⟩
 end Examples.E2_1_9
 
+-- Section 3, "The rule induction principle"
+
+namespace SyntacticRule
+def derivable_subset {X : Set t} (R : Set (SyntacticRule X)) : Set t :=
+  { x | Derivation.derives R x }
+
+lemma derivable_subset_is_subset {X : Set t}
+  (R : Set (SyntacticRule X))
+  : derivable_subset R ⊆ X := by
+  intro x x_derivation
+  rcases x_derivation with ⟨d⟩
+  cases d with
+  | ax _ _ => simp
+  | with_premises _ _ => simp
+
+-- Theorem 3.1, "Rule induction"
+theorem rule_induction
+  : ∀ (R : Set (SyntacticRule X)),
+  (derivable_subset R ∈ Cl R)
+  ∧ (∀ S, S ∈ Cl R → derivable_subset R ⊆ S) := by
+  intro R
+  constructor
+  · dsimp [Cl]
+    dsimp [closure_conditions_inter]
+    dsimp [derivable_subset]
+    intro Y h_Y_mem_closure_conditions
+    rcases h_Y_mem_closure_conditions with ⟨r, h_rmem, h_Y_r_closure_condition⟩
+    rw [← h_Y_r_closure_condition]
+    dsimp [closure_condition]
+    constructor
+    · exact derivable_subset_is_subset R
+    · intro premise_derivations
+      apply Nonempty.intro
+      apply Derivation.with_premises h_rmem
+      intro u u_premise
+      apply Nonempty.some
+      exact premise_derivations u u_premise
+  · intro S h_S_mem_closure_conditions
+    -- Note that these `change` lines are written to
+    -- follow the lecture notes (ish)
+    change ∀ v, v ∈ derivable_subset R → v ∈ S
+    change ∀ v, Nonempty (Derivation R v) → v ∈ S
+    intro v ⟨d⟩
+    induction d with
+    | @ax r h_rmem h_r_axiom =>
+      suffices (∀ u (h_umem : u ∈ X), ⟨u, h_umem⟩ ∈ r.premises → u ∈ S) by
+        simp [Cl, closure_conditions_inter, closure_condition] at h_S_mem_closure_conditions
+        exact (h_S_mem_closure_conditions r h_rmem).right this
+      intro u _ h_umem
+      dsimp [is_axiom] at h_r_axiom
+      apply List.nil_of_isEmpty at h_r_axiom
+      rw [h_r_axiom] at h_umem
+      exfalso
+      apply List.not_mem_nil
+      exact h_umem
+    | @with_premises r h_rmem h_premises ih =>
+      sorry
+
+-- TODO - prove/state the equivalence of the big
+--        intersection form of rule induction theorem
+
+-- TODO - Example 3.2
+
+end SyntacticRule
+
 end FormalLanguagesAndAutomata
