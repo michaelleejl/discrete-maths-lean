@@ -100,21 +100,54 @@ namespace SyntacticRule
 def premise_values {X : Set t} (r : SyntacticRule X) : List t :=
   List.map (fun x => x.val) r.premises
 
+lemma in_premise_only_if_in_premise_values {X : Set t} (r : SyntacticRule X)
+  : ∀ u (h_umem : u ∈ X), ⟨u, h_umem⟩ ∈ r.premises → u ∈ r.premise_values := by
+  intro u h_umem h_in_premises
+  suffices ∃ (h : u ∈ X), ⟨u, h⟩ ∈ r.premises by
+    simp [this]
+  use h_umem
+
 @[simp]
-theorem premise_values_eq_nil_only_if {X : Set t} (r : SyntacticRule X) :
-  r.premise_values = [] → r.premises = [] := by
+lemma premise_values_eq_nil_only_if_premises_eq_nil {X : Set t} (r : SyntacticRule X)
+  : r.premise_values = [] → r.premises = [] := by
   intro h
   dsimp [premise_values] at h
   apply List.map_eq_nil_iff.mp at h
   exact h
+
+lemma premise_values_eq_nil_if_premises_eq_nil {X : Set t} (r : SyntacticRule X)
+  : r.premises = [] → r.premise_values = [] := by
+  intro h
+  dsimp [premise_values]
+  apply List.map_eq_nil_iff.mpr
+  exact h
+
+theorem premise_values_eq_nil_iff_premises_eq_nil {X : Set t} (r : SyntacticRule X)
+  : r.premise_values = [] ↔ r.premises = [] := by
+  constructor
+  · exact premise_values_eq_nil_only_if_premises_eq_nil r
+  · exact premise_values_eq_nil_if_premises_eq_nil r
 
 @[simp]
 def conclusion_value {X : Set t} (r : SyntacticRule X) : t :=
   r.conclusion.1
 
 @[simp]
-def is_axiom (R : SyntacticRule t) : Prop :=
-  List.isEmpty R.premises
+def is_axiom (r : SyntacticRule t) : Prop :=
+  List.isEmpty r.premises
+
+lemma is_axiom_only_if_premises_eq_nil
+  (r : SyntacticRule t)
+  : r.is_axiom → r.premises = [] := by simp
+
+lemma is_axiom_only_if_premise_values_eq_nil
+  (r : SyntacticRule t)
+  : r.is_axiom → r.premise_values = [] := by
+  intro h_axiom
+  suffices r.premises = [] by
+    exact premise_values_eq_nil_if_premises_eq_nil r
+      (is_axiom_only_if_premises_eq_nil r h_axiom)
+  exact is_axiom_only_if_premises_eq_nil r h_axiom
 
 -- Example 2.1.4.2, "Syntactic rules for forming natural numbers"
 namespace Examples.E2_1_4_2
@@ -299,20 +332,35 @@ theorem rule_induction
     change ∀ v, v ∈ derivable_subset R → v ∈ S
     change ∀ v, Nonempty (Derivation R v) → v ∈ S
     intro v ⟨d⟩
+    have h_closure_condition :
+      ∀ (r : SyntacticRule X) (h_rmem : r ∈ R),
+      (∀ u, u ∈ r.premise_values → u ∈ S)
+      → r.conclusion_value ∈ S
+      := by
+      have h_S_mem_closure_conditions' :
+        ∀ (r : SyntacticRule X), r ∈ R →
+          S ⊆ X ∧
+            ((∀ u, u ∈ r.premise_values → u ∈ S) → r.conclusion_value ∈ S) := by
+        simpa [Cl, closure_conditions_inter, closure_condition]
+          using h_S_mem_closure_conditions
+      intro r h_rmem h
+      exact (h_S_mem_closure_conditions' r h_rmem).right h
     induction d with
     | @ax r h_rmem h_r_axiom =>
-      suffices (∀ u (h_umem : u ∈ X), ⟨u, h_umem⟩ ∈ r.premises → u ∈ S) by
-        simp [Cl, closure_conditions_inter, closure_condition] at h_S_mem_closure_conditions
-        exact (h_S_mem_closure_conditions r h_rmem).right this
-      intro u _ h_umem
+      apply h_closure_condition r h_rmem
+      intro u h_umem
       dsimp [is_axiom] at h_r_axiom
       apply List.nil_of_isEmpty at h_r_axiom
-      rw [h_r_axiom] at h_umem
+      have h_r_premise_values_eq_nil : r.premise_values = [] := by
+        exact (SyntacticRule.premise_values_eq_nil_if_premises_eq_nil r h_r_axiom)
+      rw [h_r_premise_values_eq_nil] at h_umem
       exfalso
       apply List.not_mem_nil
       exact h_umem
     | @with_premises r h_rmem h_premises ih =>
-      sorry
+      apply h_closure_condition r h_rmem
+      intro u h_umem
+      exact ih u h_umem
 
 -- TODO - prove/state the equivalence of the big
 --        intersection form of rule induction theorem
