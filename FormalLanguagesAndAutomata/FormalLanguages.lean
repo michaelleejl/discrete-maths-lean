@@ -1,3 +1,4 @@
+import Mathlib.Data.Set.Lattice
 import Mathlib.Data.Real.Basic
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Vector.Defs
@@ -185,6 +186,19 @@ def closure_conditions_inter {X : Set t} (R : Set (SyntacticRule X))
 def Cl {X : Set t} (R : Set (SyntacticRule X)) :=
   closure_conditions_inter R
 
+def in_Cl_if_closed {X : Set t}
+  (R : Set (SyntacticRule X)) (S : Set t)
+  : S ⊆ X
+    → (∀ r ∈ R, (∀ u ∈ r.premise_values, u ∈ S) → r.conclusion_value ∈ S)
+    → S ∈ Cl R := by
+  intro h_subset h_closed
+  dsimp [Cl, closure_conditions_inter]
+  intro Y hY
+  rcases hY with ⟨r, h_rmem, hY_eq⟩
+  rw [← hY_eq]
+  dsimp [closure_condition]
+  exact ⟨h_subset, h_closed r h_rmem⟩
+
 -- Definition 2.1.5
 inductive Derivation {X : Set t} (R : Set (SyntacticRule X))
   : t → Type where
@@ -256,7 +270,7 @@ def FormalLanguageSyntacticPresentation
 
 -- Example 2.1.8, "A syntactic presentation of a formal language"
 namespace Examples.E2_1_8
-def ExampleLanguage : FormalLanguageSyntacticPresentation {'a', 'b', 'c'} :=
+def ExampleLanguage : FormalLanguageSyntacticPresentation {'a', 'b'} :=
   Set.sUnion {
     (Set.singleton {premises := [], conclusion := ⟨ε, by simp⟩}),
     { {
@@ -264,18 +278,18 @@ def ExampleLanguage : FormalLanguageSyntacticPresentation {'a', 'b', 'c'} :=
         conclusion := ⟨Strings.concat
           [⟨'a', by simp⟩]
           (Strings.concat u [⟨'b', by simp⟩]), by simp⟩}
-      | u : Strings {'a', 'b', 'c'} },
+      | u },
     { {
         premises := [⟨u, by simp⟩],
         conclusion := ⟨Strings.concat
           [⟨'b', by simp⟩]
           (Strings.concat u [⟨'a', by simp⟩]), by simp⟩}
-      | u : Strings {'a', 'b', 'c'} },
+      | u },
     { {
         premises := [⟨u, by simp⟩, ⟨v, by simp⟩],
         conclusion := ⟨Strings.concat u v, by simp⟩}
-      | (u : Strings {'a', 'b', 'c'})
-        (v : Strings {'a', 'b', 'c'}) }
+      | (u : Strings {'a', 'b'})
+        (v : Strings {'a', 'b'}) }
   }
 end Examples.E2_1_8
 
@@ -303,6 +317,16 @@ lemma derivable_subset_is_subset {X : Set t}
   cases d with
   | ax _ _ => simp
   | with_premises _ _ => simp
+
+lemma in_derivable_subset_iff_derives {X : Set t}
+  (R : Set (SyntacticRule X))
+  : ∀ x, x ∈ derivable_subset R ↔ Derivation.derives R x := by
+  intro x
+  constructor
+  · intro h
+    exact h
+  · intro h
+    exact h
 
 -- Theorem 3.1, "Rule induction"
 theorem rule_induction
@@ -362,10 +386,80 @@ theorem rule_induction
       intro u h_umem
       exact ih u h_umem
 
--- TODO - prove/state the equivalence of the big
---        intersection form of rule induction theorem
+theorem rule_induction_as_subset
+  : ∀ (R : Set (SyntacticRule X)),
+  derivable_subset R = Set.sInter (Cl R) := by
+  intro R
+  have ⟨h_X_in_Cl, h_X_min⟩ := rule_induction R
+  apply Set.Subset.antisymm
+  · exact Set.subset_sInter h_X_min
+  · exact Set.sInter_subset_of_mem h_X_in_Cl
 
--- TODO - Example 3.2
+-- Example 3.2, "Application of rule induction"
+namespace Examples.E3_2
+open Examples.E2_1_8
+
+abbrev L := ExampleLanguage
+
+def count {symbols : Finset Char} (s : Strings symbols) (x : Alphabet symbols) : ℕ :=
+  let ⟨x, _⟩ := x
+  List.countP (fun ⟨y, _⟩ => y = x) s
+
+def P (u : Strings {'a', 'b'}) : Prop :=
+  count u ⟨'a', by simp⟩ = count u ⟨'b', by simp⟩
+
+example : ∀ u, Derivation L u → P u := by
+  let S := { u | P u }
+  intro u d
+  suffices S ∈ Cl L by
+    have h : derivable_subset L ⊆ S := by
+      apply (rule_induction L).right
+      exact this
+    have h_in_derivable_subset : u ∈ derivable_subset L := by
+      apply (in_derivable_subset_iff_derives L u).mp
+      exact Nonempty.intro d
+    have h_u_in_S : u ∈ S := h h_in_derivable_subset
+    simpa [S] using h_u_in_S
+  apply in_Cl_if_closed L S
+  · intro x hx
+    simp [set_of_type]
+  · intro r r_in_L h_premises_in_S
+    rcases Set.mem_sUnion.mp r_in_L with ⟨W, hW_mem, h_r_mem_W⟩
+    have hW_cases := by simpa [ExampleLanguage] using hW_mem
+    rcases hW_cases with hW0 | hW1 | hW2 | hW3
+    · cases hW0
+      have hr : r = { premises := [], conclusion := ⟨ε, by simp⟩ } := by
+        simpa [Set.mem_singleton_iff] using h_r_mem_W
+      subst hr
+      -- Axiom rule: ε has equally many a's and b's.
+      simp [S, P, count]
+    · cases hW1
+      rcases (by simpa [Set.mem_setOf_eq] using h_r_mem_W) with ⟨w, hr⟩
+      subst hr
+      have hw_in_S : w ∈ S := h_premises_in_S w (by simp)
+      have hPw : P w := by simpa [S] using hw_in_S
+      change P (Strings.concat [⟨'a', by simp⟩] (Strings.concat w [⟨'b', by simp⟩]))
+      dsimp [P, count] at hPw ⊢
+      simp [List.countP_append, hPw]
+    · cases hW2
+      rcases (by simpa [Set.mem_setOf_eq] using h_r_mem_W) with ⟨w, hr⟩
+      subst hr
+      have hw_in_S : w ∈ S := h_premises_in_S w (by simp)
+      have hPw : P w := by simpa [S] using hw_in_S
+      change P (Strings.concat [⟨'b', by simp⟩] (Strings.concat w [⟨'a', by simp⟩]))
+      dsimp [P, count] at hPw ⊢
+      simp [List.countP_append, hPw]
+    · cases hW3
+      rcases (by simpa [Set.mem_setOf_eq] using h_r_mem_W) with ⟨w, v, hr⟩
+      subst hr
+      have hw_in_S : w ∈ S := h_premises_in_S w (by simp)
+      have hv_in_S : v ∈ S := h_premises_in_S v (by simp)
+      have hPw : P w := by simpa [S] using hw_in_S
+      have hPv : P v := by simpa [S] using hv_in_S
+      change P (Strings.concat w v)
+      dsimp [P, count] at hPw hPv ⊢
+      simp [List.countP_append, hPw, hPv]
+end Examples.E3_2
 
 end SyntacticRule
 
